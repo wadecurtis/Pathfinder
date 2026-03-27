@@ -124,7 +124,7 @@ If not:
 
 Fork first. This creates your own copy of Pathfinder on GitHub that you control.
 
-1. Go to [github.com/wadecurtis/Pathfinder](https://github.com/wadecurtis/Pathfinder)
+1. Go to [github.com/wadecurtis/FS_Pathfinder](https://github.com/wadecurtis/FS_Pathfinder)
 2. Click **Fork** (top right) then **Create fork**
 3. Open VS Code, then open a terminal (`` Ctrl+` `` on Windows, `` Cmd+` `` on Mac)
 4. Clone your fork:
