@@ -74,9 +74,11 @@ scoring:
     - "Requires 5+ years of experience specifically at a consulting firm or in professional services"
     - "Requires a certification not held as a mandatory requirement: CPQ, Experience Cloud, MuleSoft, Marketing Cloud, Service Cloud"
     - "Junior admin or support role — ticket resolution, data entry, deduplication"
-    - "Salary explicitly stated below $80K CAD or $65 USD per hour"
-    - "Employer is a global SI: Accenture, Deloitte, IBM, Capgemini, Cognizant, or equivalent"
     - "US-only role requiring US work authorization"
+    # Add a salary floor if you want to filter by compensation:
+    # - "Salary explicitly stated below $XX CAD or $XX USD per hour"
+    # Add employer types you want to avoid, e.g. company size, industry, or structure:
+    # - "Employer is a [type of company you want to exclude]"
 
 
 # ── SEARCH SETTINGS ───────────────────────────────────────────────────────────
