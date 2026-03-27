@@ -1,0 +1,150 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# PATHFINDER — config.yaml
+# One file. Edit this to make Pathfinder yours.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+# ── YOUR PROFILE ──────────────────────────────────────────────────────────────
+# The AI reads your profile when scoring each job posting.
+# Be specific — actual metrics, real outcomes, technologies used.
+
+profile:
+  name: "Wade Curtis"
+
+  # One-line positioning — the AI leads with this when evaluating fit
+  framing: "Salesforce practitioner moving into consulting"
+
+  # The 6-8 facts the AI weighs every role against.
+  # Write these as evidence, not job description. Specific outcomes beat vague claims.
+  # Bad:  "Strong Salesforce experience"
+  # Good: "Rebuilt a failed $30K multi-partner implementation from scratch, ran $2.5M through it"
+  highlights:
+    - "5 years hands-on Salesforce experience (Sales Cloud, Agentforce)"
+    - "Built and ran two production Sales Cloud orgs end-to-end"
+    - "Recovered a failed $30K multi-partner implementation, rebuilt from scratch"
+    - "Ran 1,500+ deals and $2.5M revenue through the org built — operator credibility most consultants lack"
+    - "Built a working Agentforce agent from scratch (quote generation via plain language input)"
+    - "UBC Sauder Business Analysis 96%"
+    - "Background is operator/practitioner (built and owned production orgs), not career-changer — this is depth, not a gap"
+
+  certifications_held:
+    - "Salesforce Admin"
+    - "Agentforce Specialist"
+    - "Agentblazer Legend"
+
+  certifications_in_progress:
+    - "Sales Cloud Consultant"
+
+  languages:
+    - "English"
+
+  # Where you're willing to work
+  location_prefs:
+    base: "Vancouver, BC"
+    hybrid_ok:
+      - "Vancouver"
+      - "Burnaby"
+    open_to_remote: true
+
+
+# ── SCORING CRITERIA ──────────────────────────────────────────────────────────
+# What makes a role a YES, MAYBE, or NO.
+# The AI applies these rules exactly as written — customize for your situation.
+
+scoring:
+  qualify:
+    - "Salesforce Sales Cloud as the primary platform"
+    - "SMB or mid-market client base (roughly 10-500 employees)"
+    - "Full lifecycle delivery: discovery through go-live through adoption"
+    - "Client-facing role where the consultant owns discovery"
+    - "Emphasis on adoption or change management"
+    - "Declarative automation depth (Flows, validation rules, assignment rules) without requiring Apex"
+    - "Agentforce or AI implementation is valued (does not need to be required)"
+    - "Remote-friendly, or contract and fractional structures accepted"
+
+  neutral:
+    - "CRM platform other than Salesforce, where Salesforce background is transferable"
+    - "Enterprise clients — lower fit than SMB/mid-market but not disqualifying"
+    - "Pre-sales or Solutions Engineer role — skills transfer, direction is away from implementation depth"
+
+  disqualify:
+    - "Requires Apex, LWC, or custom development"
+    - "Requires domain expertise in BFSI, healthcare, government, or manufacturing"
+    - "Requires bilingual French and English"
+    - "Requires 5+ years of experience specifically at a consulting firm or in professional services"
+    - "Requires a certification not held as a mandatory requirement: CPQ, Experience Cloud, MuleSoft, Marketing Cloud, Service Cloud"
+    - "Junior admin or support role — ticket resolution, data entry, deduplication"
+    - "Salary explicitly stated below $80K CAD or $65 USD per hour"
+    - "Employer is a global SI: Accenture, Deloitte, IBM, Capgemini, Cognizant, or equivalent"
+    - "US-only role requiring US work authorization"
+
+
+# ── SEARCH SETTINGS ───────────────────────────────────────────────────────────
+# What to search for, where, and how aggressively.
+
+search:
+  queries:
+    - "Salesforce Consultant"
+    - "Salesforce Implementation Consultant"
+    - "Salesforce Solutions Consultant"
+    - "Salesforce Functional Consultant"
+    - "CRM Consultant"
+    - "Salesforce Solutions Engineer"
+    - "Salesforce Pre-Sales"
+    - "Salesforce Technical Consultant"
+
+  locations:
+    - "Canada"
+
+  sources:
+    - linkedin        # working reliably
+    # - indeed        # scraping unreliable, left for future use
+    # - glassdoor     # scraping unreliable, left for future use
+
+  hours_old: 336       # 2-week lookback
+  max_per_query: 20
+  remote_only: false
+  ai_filter: true
+
+  target_roles: >
+    Solutions Consultant, Implementation Consultant, Solutions Engineer,
+    or Pre-Sales Consultant roles at Salesforce consulting partners or ISVs.
+    Must involve Salesforce platform work — implementations, discovery,
+    or pre-sales technical demos. Not internal admin roles, not pure
+    sales quota roles, not staffing firms.
+
+  title_keywords:
+    - "salesforce"
+    - "solutions consultant"
+    - "implementation consultant"
+    - "solutions engineer"
+    - "pre-sales"
+    - "presales"
+    - "crm consultant"
+    - "functional consultant"
+
+  title_exclude:
+    - "account executive"
+    - "account manager"
+    - "sdr"
+    - "bdr"
+    - "recruiter"
+    - "marketing manager"
+    - "retail"
+    - "food"
+    - "healthcare"
+    - "civil engineer"
+    - "mechanical engineer"
+    - "electrical engineer"
+    - "warehouse"
+    - "driver"
+    - "nurse"
+
+
+# ── SYSTEM ────────────────────────────────────────────────────────────────────
+# Rarely needs changing.
+
+llm:
+  provider: groq
+  groq_model: llama-3.3-70b-versatile
+  max_tokens: 4096

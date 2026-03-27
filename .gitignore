@@ -1,0 +1,8 @@
+pathfinder/.env
+pathfinder/data/
+pathfinder/config/*.backup
+*.db
+.venv/
+__pycache__/
+*.pyc
+.sfdx/

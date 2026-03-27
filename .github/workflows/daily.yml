@@ -1,0 +1,41 @@
+name: Pathfinder — Daily Digest
+
+on:
+  schedule:
+    - cron: "7 14 * * *"   # 6am PST / 7am PDT Vancouver, daily
+  workflow_dispatch:           # Manual trigger from GitHub anytime
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore seen-jobs cache
+        uses: actions/cache@v4
+        with:
+          path: pathfinder/data/tracker.db
+          key: tracker-db-${{ github.run_id }}
+          restore-keys: |
+            tracker-db-
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r pathfinder/requirements.txt
+
+      - name: Run scout
+        env:
+          GROQ_API_KEY:        ${{ secrets.GROQ_API_KEY }}
+          GMAIL_SENDER:        ${{ secrets.GMAIL_SENDER }}
+          GMAIL_APP_PASSWORD:  ${{ secrets.GMAIL_APP_PASSWORD }}
+          DIGEST_RECIPIENT:     ${{ secrets.DIGEST_RECIPIENT }}
+          SF_USERNAME:         ${{ secrets.SF_USERNAME }}
+          SF_PASSWORD:         ${{ secrets.SF_PASSWORD }}
+          SF_SECURITY_TOKEN:   ${{ secrets.SF_SECURITY_TOKEN }}
+        run: python pathfinder.py
