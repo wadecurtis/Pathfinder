@@ -2,6 +2,9 @@
 # PATHFINDER — config.yaml
 # One file. Edit this to make Pathfinder yours.
 # ═══════════════════════════════════════════════════════════════════════════════
+# ⚠️  This file contains your personal data.
+# Do not push it to a public repo after filling it in.
+# Add config.yaml to your .gitignore if you fork this publicly.
 
 
 # ── YOUR PROFILE ──────────────────────────────────────────────────────────────
@@ -9,7 +12,7 @@
 # Be specific — actual metrics, real outcomes, technologies used.
 
 profile:
-  name: "Wade Curtis"
+  name: "Your Name"
 
   # One-line positioning — the AI leads with this when evaluating fit
   framing: "Salesforce practitioner moving into consulting"
@@ -17,14 +20,14 @@ profile:
   # The 6-8 facts the AI weighs every role against.
   # Write these as evidence, not job description. Specific outcomes beat vague claims.
   # Bad:  "Strong Salesforce experience"
-  # Good: "Rebuilt a failed $30K multi-partner implementation from scratch, ran $2.5M through it"
+  # Good: "Recovered a failed multi-partner implementation, ran $Xm revenue through the rebuilt org"
   highlights:
     - "5 years hands-on Salesforce experience (Sales Cloud, Agentforce)"
     - "Built and ran two production Sales Cloud orgs end-to-end"
-    - "Recovered a failed $30K multi-partner implementation, rebuilt from scratch"
-    - "Ran 1,500+ deals and $2.5M revenue through the org built — operator credibility most consultants lack"
+    - "Recovered a failed multi-partner implementation, rebuilt from scratch"
+    - "Ran 1,000+ deals and $Xm revenue through the org built — operator credibility most consultants lack"
     - "Built a working Agentforce agent from scratch (quote generation via plain language input)"
-    - "UBC Sauder Business Analysis 96%"
+    - "Business Analysis coursework, distinction"
     - "Background is operator/practitioner (built and owned production orgs), not career-changer — this is depth, not a gap"
 
   certifications_held:
@@ -40,10 +43,10 @@ profile:
 
   # Where you're willing to work
   location_prefs:
-    base: "Vancouver, BC"
+    base: "Your City, Province/State"
     hybrid_ok:
-      - "Vancouver"
-      - "Burnaby"
+      - "Your City"
+      - "Nearby City"
     open_to_remote: true
 
 
@@ -64,7 +67,7 @@ scoring:
 
   neutral:
     - "CRM platform other than Salesforce, where Salesforce background is transferable"
-    - "Enterprise clients — lower fit than SMB/mid-market but not disqualifying"
+    - "Enterprise clients - lower fit than SMB/mid-market but not disqualifying"
     - "Pre-sales or Solutions Engineer role — skills transfer, direction is away from implementation depth"
 
   disqualify:

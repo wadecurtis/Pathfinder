@@ -8,6 +8,40 @@ You set it up once. After that it runs on its own.
 
 ---
 
+## Quick reference
+
+All commands you'll use. Details are in the episodes below.
+
+### Python / Shell
+
+| Command | What it does |
+|---|---|
+| `bash pathfinder/setup.sh` | First-time setup: creates `.venv`, installs deps, copies `.env` |
+| `.venv\Scripts\activate` | Activate virtual environment — Windows (Command Prompt) |
+| `.venv\Scripts\Activate.ps1` | Activate virtual environment — Windows (PowerShell) |
+| `source .venv/bin/activate` | Activate virtual environment — Mac |
+| `python pathfinder.py --preview` | Send a sample digest email (no API calls, no job queries) |
+| `python pathfinder.py --test` | Run pipeline in test mode (2 queries, capped results) |
+| `bash pathfinder/clean_db.sh` | Reset seen-jobs database — re-scores everything on next run |
+
+### Git
+
+| Command | What it does |
+|---|---|
+| `git clone https://github.com/YOUR_USERNAME/Pathfinder.git` | Clone your fork locally |
+| `git add .github/workflows/daily.yml` | Stage a schedule change |
+| `git commit -m "update schedule"` | Commit staged changes |
+| `git push` | Push to GitHub — next automated run uses the updated config |
+
+### VS Code
+
+| Action | How |
+|---|---|
+| Open terminal | Ctrl+` (Windows) / Cmd+` (Mac) |
+| Open project folder | File > Open Folder → select the `Pathfinder` folder |
+
+---
+
 ## What this is
 
 **Self-hosted.** Pathfinder runs entirely on your own GitHub account using free GitHub Actions. Nothing runs on any third-party server. No account to create, no subscription, no tracking.
@@ -218,8 +252,8 @@ The AI reads this every time it scores a job against you.
 | Weak | Strong |
 |---|---|
 | "Strong Salesforce experience" | "Built and ran two production Sales Cloud orgs end-to-end" |
-| "Proven results" | "Ran 1,500+ deals and $2.5M revenue through a system I personally implemented" |
-| "Fast learner" | "Completed UBC Sauder Business Analysis at 96% while earning 3 Salesforce certifications" |
+| "Proven results" | "Ran 1,500+ deals and $Xm revenue through a system I personally implemented" |
+| "Fast learner" | "Completed [Course] at [score]% while earning 3 Salesforce certifications" |
 
 The AI cannot score well on vague claims. Specific and outcome-focused highlights produce accurate results. Vague ones produce noise.
 
