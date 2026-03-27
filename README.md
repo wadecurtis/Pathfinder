@@ -360,6 +360,20 @@ Wait 2-3 minutes. Check your inbox.
 
 Green run plus email in your inbox means you're done. Pathfinder runs every morning automatically from here on.
 
+### If the run fails
+
+Click the failed run, then click **scout** in the left panel to expand the job log. Scroll to the red section to see the error.
+
+Common causes:
+
+| Error | Fix |
+|---|---|
+| `GROQ_API_KEY not set` | Secrets weren't added yet — go back to Settings > Secrets and add all four |
+| `Authentication failed` | Gmail App Password is wrong or has spaces — re-enter it with no spaces |
+| `No module named groq` | Dependencies failed to install — re-run the workflow |
+
+If the error isn't in the table above, copy the red text and paste it into [Claude](https://claude.ai) with a description of what you were trying to do. It will tell you exactly what went wrong.
+
 ### Adjust the schedule
 
 The default is 6am PST / 7am PDT daily. To change it, open `.github/workflows/daily.yml`:
