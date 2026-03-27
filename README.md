@@ -16,9 +16,10 @@ All commands you'll use. Details are in the episodes below.
 
 | Command | What it does |
 |---|---|
-| `bash pathfinder/setup.sh` | First-time setup: creates `.venv`, installs deps, copies `.env` |
-| `.venv\Scripts\activate` | Activate virtual environment — Windows (Command Prompt) |
+| `.\pathfinder\setup.ps1` | First-time setup — Windows (PowerShell) |
+| `bash pathfinder/setup.sh` | First-time setup — Mac / Linux / Git Bash |
 | `.venv\Scripts\Activate.ps1` | Activate virtual environment — Windows (PowerShell) |
+| `.venv\Scripts\activate` | Activate virtual environment — Windows (Command Prompt) |
 | `source .venv/bin/activate` | Activate virtual environment — Mac |
 | `python pathfinder.py --preview` | Send a sample digest email (no API calls, no job queries) |
 | `python pathfinder.py --test` | Run pipeline in test mode (2 queries, capped results) |
