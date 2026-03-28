@@ -307,10 +307,10 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
               <td class="bg-hypothesis"
                   style="padding:10px 12px;background-color:#F0F9F5;border-radius:6px;
                          border-left:3px solid {TEAL};">
-                <p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;
+                <p style="margin:0 0 4px;font-size:15px;text-transform:uppercase;
                            letter-spacing:1.2px;color:{TEAL};font-weight:700;"
                    class="t-teal">Hypothesis &middot; {job['hypothesis_category']}</p>
-                <p style="margin:0;font-size:15px;color:{TEXT};line-height:1.5;"
+                <p style="margin:0;font-size:15px;font-weight:700;color:{TEXT};line-height:1.5;"
                    class="t-primary">{job['hypothesis_signal']}</p>
               </td>
             </tr>
@@ -333,7 +333,7 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
              class="{company_class}">{job['company']}</p>
           <p style="margin:0 0 10px;font-size:13px;color:{MUTED};"
              class="t-muted">{job['location']}</p>
-          <p style="margin:0 0 12px;font-size:15px;font-weight:500;color:#111111;font-style:italic;line-height:1.5;"
+          <p style="margin:0 0 12px;font-size:15px;font-weight:500;color:#111111;line-height:1.5;"
              class="t-reason">{job['reason']}</p>
           {hypothesis_html}
           <!-- Button: table wrapper required for bgcolor in Outlook -->
@@ -380,7 +380,7 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
             return f"""<tr>
   <td style="padding:11px 16px;{border}">
     <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:{TEXT};" class="t-primary">{job['company']} &middot; {job['title']}</p>
-    <p style="margin:0;font-size:13px;color:{MUTED};font-style:italic;line-height:1.4;" class="t-muted">{job['reason']}</p>
+    <p style="margin:0;font-size:13px;color:{MUTED};line-height:1.4;" class="t-muted">{job['reason']}</p>
   </td>
 </tr>"""
         rows = "".join(no_row(j, last=(i == len(no_jobs)-1)) for i, j in enumerate(no_jobs))

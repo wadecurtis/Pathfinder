@@ -81,6 +81,7 @@ scoring:
     # Add a salary floor if you want to filter by compensation:
     # - "Salary explicitly stated below $XX CAD or $XX USD per hour"
     # Add employer types you want to avoid, e.g. company size, industry, or structure:
+    # - "Employer is a global SI: Accenture, Deloitte, IBM, Capgemini, Cognizant, or equivalent"
     # - "Employer is a [type of company you want to exclude]"
 
 

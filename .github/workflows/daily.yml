@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Restore seen-jobs cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: pathfinder/data/tracker.db
           key: tracker-db-${{ github.run_id }}
@@ -39,3 +39,10 @@ jobs:
           SF_PASSWORD:         ${{ secrets.SF_PASSWORD }}
           SF_SECURITY_TOKEN:   ${{ secrets.SF_SECURITY_TOKEN }}
         run: python pathfinder.py
+
+      - name: Save seen-jobs cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: pathfinder/data/tracker.db
+          key: tracker-db-${{ github.run_id }}

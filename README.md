@@ -159,7 +159,7 @@ If not:
 
 Fork first. This creates your own copy of Pathfinder on GitHub that you control.
 
-1. Go to [github.com/wadecurtis/FS_Pathfinder](https://github.com/wadecurtis/FS_Pathfinder)
+1. Go to [github.com/wadecurtis/Pathfinder](https://github.com/wadecurtis/Pathfinder)
 2. Click **Fork** (top right) then **Create fork**
 3. Open VS Code, then open a terminal (`` Ctrl+` `` on Windows, `` Cmd+` `` on Mac)
 4. Clone your fork:
@@ -213,6 +213,64 @@ source .venv/bin/activate
 ```
 
 You'll see `(.venv)` at the start of your terminal line when it's active. You need this active every time you run Pathfinder locally.
+
+---
+
+## Prompts
+
+These two prompts are used with Claude (or any AI assistant) to build and validate your config before running the pipeline.
+
+### Resume interview prompt
+
+Use this before filling in `config.yaml`. Paste your resume, then let the AI interview you to surface what a resume doesn't capture — positioning, outcomes, and what you actually want.
+
+```
+I'm setting up Pathfinder, an automated job search tool that scores
+job listings against my background using AI. I need your help
+building the profile and scoring sections of my config.yaml.
+
+Here is my resume:
+
+[paste resume here]
+
+Using my resume as a starting point, interview me with one question
+at a time to clarify and fill in what a resume doesn't capture:
+- How I'd position myself in one line
+- The outcomes and specifics behind what's on the resume
+- What a strong role actually looks like for me right now
+- What I'd never accept regardless of everything else
+- My location and remote preferences
+
+After each answer confirm what you heard before moving to the next
+question. Once you have everything, generate the profile and scoring
+sections of config.yaml exactly as they should appear -- ready to
+paste in with no editing needed.
+
+Start with your first clarifying question.
+```
+
+### Scoring validation prompt
+
+Use this after filling in your scoring criteria but before going live. Paste your qualify/neutral/disqualify sections and 2-3 real job postings to check whether your rules are working the way you expect.
+
+```
+Here are my Pathfinder scoring criteria:
+
+[paste your qualify, neutral, and disqualify sections from config.yaml]
+
+I want to test them against these job descriptions before I run the
+pipeline. For each posting below, tell me how you would score it
+against my criteria and whether the result matches what I would
+actually want.
+
+Flag any rules that are:
+- Too vague to score consistently
+- Too broad and likely to catch roles I'd want
+- Missing a signal I clearly care about based on my criteria
+
+[paste 2-3 real job postings -- one strong fit, one clear no,
+one you're unsure about]
+```
 
 ---
 
@@ -374,9 +432,26 @@ LinkedIn rate-limits scrapers after repeated runs. Wait a few minutes and try ag
 
 This makes Pathfinder run every morning automatically. Your computer does not need to be on.
 
+### Enable Actions and set permissions
+
+After forking, GitHub disables Actions by default. You need to turn them on and grant write access so the workflow can save your seen-jobs cache between runs.
+
+**Enable Actions:**
+1. Go to your forked repo on GitHub
+2. Click the **Actions** tab
+3. Click **I understand my workflows, go ahead and enable them**
+
+**Set workflow permissions:**
+1. Go to **Settings > Actions > General**
+2. Scroll to **Workflow permissions**
+3. Select **Read and write permissions**
+4. Click **Save**
+
+Without this, the cache step will fail silently and Pathfinder will re-score jobs it has already seen.
+
 ### Add your secrets to GitHub
 
-Go to your forked repo on GitHub, then Settings > Secrets and variables > Actions > New repository secret.
+Go to your forked repo on GitHub, then **Settings > Secrets and variables > Actions > New repository secret**.
 
 Add these four:
 
@@ -406,6 +481,7 @@ Common causes:
 | `GROQ_API_KEY not set` | Secrets weren't added yet — go back to Settings > Secrets and add all four |
 | `Authentication failed` | Gmail App Password is wrong or has spaces — re-enter it with no spaces |
 | `No module named groq` | Dependencies failed to install — re-run the workflow |
+| Re-scoring jobs you've already seen | Workflow permissions aren't set to Read and write — go back to Settings > Actions > General and fix it |
 
 If the error isn't in the table above, copy the red text and paste it into [Claude](https://claude.ai) with a description of what you were trying to do. It will tell you exactly what went wrong.
 
