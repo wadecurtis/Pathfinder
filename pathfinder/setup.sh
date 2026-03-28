@@ -71,6 +71,9 @@ echo -e "${GREEN}Activated .venv${NC}"
 echo ""
 echo "Installing dependencies..."
 pip install --upgrade pip -q
+# Install numpy with wheels-only first to avoid source-compilation failures on
+# Python 3.13+ where some older numpy versions lack pre-built binaries.
+pip install numpy --only-binary=:all: -q
 pip install -r pathfinder/requirements.txt -q
 echo -e "${GREEN}All packages installed${NC}"
 

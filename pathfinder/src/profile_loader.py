@@ -14,15 +14,8 @@ def load_settings(path: str = None) -> dict:
     with open(path, "r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
 
-    # Translate config.yaml format (has 'search' key) to the internal
-    # structure that scout.py expects (has 'scout' and 'discovery' keys).
-    search = raw["search"]
     return {
-        "scout": search,
-        "discovery": {
-            "default_sources": search.get("sources", ["linkedin"]),
-            "default_locations": search.get("locations", ["canada"]),
-        },
+        "search": raw.get("search", {}),
         "llm":    raw.get("llm", {}),
         "output": raw.get("output", {}),
     }

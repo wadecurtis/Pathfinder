@@ -1,8 +1,10 @@
 # Pathfinder: Automated Job Search Digest
 
-Pathfinder runs every morning, searches LinkedIn for roles matching your target titles, scores each result against your background using AI, and emails you only the ones worth pursuing. Typically 2-5 results out of 300+ raw listings.
+Job searching produces too many listings and no good way to evaluate them. Reading through dozens of postings a day to figure out which ones actually fit your background takes real time — and most of them don't fit. The ones that do are buried.
 
-You set it up once. After that it runs on its own.
+Pathfinder searches LinkedIn every morning, scores every posting against your specific background using AI, and emails you only the roles worth pursuing. Typically 2–5 results out of 300+ raw listings. It runs automatically on GitHub and costs nothing to operate.
+
+What makes it different: it scores the job against the candidate, not keywords against a resume. Every result includes a plain-language reason why it matched and a hypothesis on why the role is open — whether it's a backfill, a new capability hire, or a strategic bet. Ghost detection flags postings that show signs of not being actively filled. The longer it runs, the more history it builds on companies and roles, and the more useful that signal becomes.
 
 ![Sample output showing a YES card with hiring hypothesis and a filtered NO card](docs/preview.svg)
 
@@ -16,10 +18,9 @@ All commands you'll use. Details are in the episodes below.
 
 | Command | What it does |
 |---|---|
-| `.\pathfinder\setup.ps1` | First-time setup — Windows (PowerShell) |
-| `bash pathfinder/setup.sh` | First-time setup — Mac / Linux / Git Bash |
-| `.venv\Scripts\Activate.ps1` | Activate virtual environment — Windows (PowerShell) |
+| `bash pathfinder/setup.sh` | First-time setup: creates `.venv`, installs deps, copies `.env` |
 | `.venv\Scripts\activate` | Activate virtual environment — Windows (Command Prompt) |
+| `.venv\Scripts\Activate.ps1` | Activate virtual environment — Windows (PowerShell) |
 | `source .venv/bin/activate` | Activate virtual environment — Mac |
 | `python pathfinder.py --preview` | Send a sample digest email (no API calls, no job queries) |
 | `python pathfinder.py --test` | Run pipeline in test mode (2 queries, capped results) |
@@ -63,7 +64,7 @@ Watch this episode before installing anything. You'll create the accounts you ne
 |---|---|---|
 | GitHub | github.com | Free |
 | Groq (AI scoring) | console.groq.com | Free |
-| Gmail (needed to send digest) | gmail.com | Free |
+| Gmail (to send digest) | gmail.com | Free |
 
 **Time to complete setup:**
 - Tools already installed (Python, Git, VS Code): 30-45 minutes
@@ -182,7 +183,7 @@ The setup script creates your Python environment, installs dependencies, and cop
 bash pathfinder/setup.sh
 ```
 
-> **Windows note:** Run this in Git Bash, not PowerShell or Command Prompt. Git Bash is installed with Git. Search "Git Bash" in the Start menu.
+> **Windows note:** Run this in Git Bash, not PowerShell or Command Prompt. Git Bash is installed with Git. Search "Git Bash" in the Start menu. If you get a "bash: command not found" error in PowerShell, open Git Bash directly and run the command from there.
 
 The script will:
 - Create a `.venv` virtual environment
@@ -216,61 +217,70 @@ You'll see `(.venv)` at the start of your terminal line when it's active. You ne
 
 ---
 
-## Prompts
+## Before Episode 4: Build your profile with AI
 
-These two prompts are used with Claude (or any AI assistant) to build and validate your config before running the pipeline.
+The two hardest parts of config.yaml to write are your `highlights` and your `scoring` criteria. These prompts help you get them right before you fill in the file.
 
-### Resume interview prompt
+### Prompt 1 — Build your highlights
 
-Use this before filling in `config.yaml`. Paste your resume, then let the AI interview you to surface what a resume doesn't capture — positioning, outcomes, and what you actually want.
-
-```
-I'm setting up Pathfinder, an automated job search tool that scores
-job listings against my background using AI. I need your help
-building the profile and scoring sections of my config.yaml.
-
-Here is my resume:
-
-[paste resume here]
-
-Using my resume as a starting point, interview me with one question
-at a time to clarify and fill in what a resume doesn't capture:
-- How I'd position myself in one line
-- The outcomes and specifics behind what's on the resume
-- What a strong role actually looks like for me right now
-- What I'd never accept regardless of everything else
-- My location and remote preferences
-
-After each answer confirm what you heard before moving to the next
-question. Once you have everything, generate the profile and scoring
-sections of config.yaml exactly as they should appear -- ready to
-paste in with no editing needed.
-
-Start with your first clarifying question.
-```
-
-### Scoring validation prompt
-
-Use this after filling in your scoring criteria but before going live. Paste your qualify/neutral/disqualify sections and 2-3 real job postings to check whether your rules are working the way you expect.
+Paste this into [Claude](https://claude.ai) or ChatGPT and answer the questions it asks. Then paste the result into the `highlights:` section of `config.yaml`.
 
 ```
-Here are my Pathfinder scoring criteria:
+I'm setting up an automated job scoring tool that evaluates postings against my background.
+The tool reads a list of "highlights" — specific, evidence-based facts about my experience —
+and uses them to decide whether a job is a YES, MAYBE, or NO for me.
 
-[paste your qualify, neutral, and disqualify sections from config.yaml]
+I need you to interview me to build this list. Ask me 6-8 questions, one at a time, that will
+surface the most specific and outcome-focused facts about my background. Focus on:
+- What I've delivered end-to-end, not just what tools I've used
+- Quantified outcomes where possible (revenue, team size, deal count, system scope)
+- Certifications, with dates if recent
+- Where I'm strong versus where I'm still building
 
-I want to test them against these job descriptions before I run the
-pipeline. For each posting below, tell me how you would score it
-against my criteria and whether the result matches what I would
-actually want.
+After I answer all your questions, write the highlights list in this format:
+- "Fact one in plain language"
+- "Fact two in plain language"
+...
 
-Flag any rules that are:
-- Too vague to score consistently
-- Too broad and likely to catch roles I'd want
-- Missing a signal I clearly care about based on my criteria
-
-[paste 2-3 real job postings -- one strong fit, one clear no,
-one you're unsure about]
+Keep each bullet to one sentence. Be specific and concrete. No vague claims like "strong communicator"
+or "fast learner." If I give you vague answers, push back and ask for specifics.
 ```
+
+### Prompt 2 — Validate your scoring criteria
+
+Once you have a draft `qualify`, `neutral`, and `disqualify` list, paste this into Claude or ChatGPT along with a few real job descriptions you've seen recently. It will tell you how each would score and whether your criteria are calibrated correctly.
+
+```
+I'm configuring a job scoring tool. It evaluates postings as YES, MAYBE, or NO using these rules:
+
+QUALIFY (push toward YES):
+[paste your qualify list]
+
+NEUTRAL (present but not disqualifying):
+[paste your neutral list]
+
+DISQUALIFY (any one = automatic NO):
+[paste your disqualify list]
+
+I'm going to paste 3 job descriptions below. For each one:
+1. Score it YES, MAYBE, or NO based on my criteria
+2. Name the single most important qualify or disqualify signal that decided the score
+3. Flag anything where my criteria are ambiguous, too broad, or likely to produce false positives/negatives
+
+After all three, give me a one-paragraph assessment of whether my criteria are well-calibrated
+or need adjustment, and suggest any specific changes.
+
+Job 1:
+[paste a job description]
+
+Job 2:
+[paste a job description]
+
+Job 3:
+[paste a job description]
+```
+
+Use the feedback to tighten your criteria before running Pathfinder live.
 
 ---
 
@@ -292,6 +302,7 @@ DIGEST_RECIPIENT=you@gmail.com
 `DIGEST_RECIPIENT` is where the digest gets sent. It can be the same address as `GMAIL_SENDER`.
 
 > `.env` is never uploaded to GitHub. It stays on your computer only.
+> **Important:** The file must be at `pathfinder/.env`, not the repo root. Pathfinder only reads from `pathfinder/.env`.
 
 ### config.yaml
 
@@ -423,7 +434,20 @@ Activate the virtual environment first (see Episode 3).
 **`Invalid country string`**
 `locations:` must be exactly `"Canada"` or `"USA"`, not `"United States"`.
 
-**`No new listings found`**
+**`No new listings found` during repeated test runs**
+Jobs seen in a previous run are filtered out automatically. To reset so the same listings appear again:
+
+*Mac / Git Bash:*
+```
+bash pathfinder/clean_db.sh
+```
+
+*Windows (PowerShell):*
+```
+python -c "import sqlite3; conn = sqlite3.connect('pathfinder/data/tracker.db'); conn.execute('DELETE FROM seen_jobs'); conn.commit(); conn.close(); print('Cleared')"
+```
+
+**`No new listings found` (not a testing issue)**
 LinkedIn rate-limits scrapers after repeated runs. Wait a few minutes and try again. If it persists, reduce `max_per_query` to 10.
 
 ---
@@ -432,26 +456,9 @@ LinkedIn rate-limits scrapers after repeated runs. Wait a few minutes and try ag
 
 This makes Pathfinder run every morning automatically. Your computer does not need to be on.
 
-### Enable Actions and set permissions
-
-After forking, GitHub disables Actions by default. You need to turn them on and grant write access so the workflow can save your seen-jobs cache between runs.
-
-**Enable Actions:**
-1. Go to your forked repo on GitHub
-2. Click the **Actions** tab
-3. Click **I understand my workflows, go ahead and enable them**
-
-**Set workflow permissions:**
-1. Go to **Settings > Actions > General**
-2. Scroll to **Workflow permissions**
-3. Select **Read and write permissions**
-4. Click **Save**
-
-Without this, the cache step will fail silently and Pathfinder will re-score jobs it has already seen.
-
 ### Add your secrets to GitHub
 
-Go to your forked repo on GitHub, then **Settings > Secrets and variables > Actions > New repository secret**.
+Go to your forked repo on GitHub, then Settings > Secrets and variables > Actions > New repository secret.
 
 Add these four:
 
@@ -462,6 +469,8 @@ Add these four:
 | `GMAIL_APP_PASSWORD` | 16-character app password, no spaces |
 | `DIGEST_RECIPIENT` | Where to send the digest (can be same address) |
 
+> **How seen-jobs persist between runs:** Pathfinder uses GitHub's built-in cache system (`actions/cache`) to save the database between daily runs. This works automatically with no extra token or configuration — the default `GITHUB_TOKEN` provided by every Actions run is sufficient.
+
 ### Trigger a test run
 
 Go to your repo, click the **Actions** tab, select **Pathfinder - Daily Digest**, click **Run workflow**.
@@ -469,21 +478,6 @@ Go to your repo, click the **Actions** tab, select **Pathfinder - Daily Digest**
 Wait 2-3 minutes. Check your inbox.
 
 Green run plus email in your inbox means you're done. Pathfinder runs every morning automatically from here on.
-
-### If the run fails
-
-Click the failed run, then click **scout** in the left panel to expand the job log. Scroll to the red section to see the error.
-
-Common causes:
-
-| Error | Fix |
-|---|---|
-| `GROQ_API_KEY not set` | Secrets weren't added yet — go back to Settings > Secrets and add all four |
-| `Authentication failed` | Gmail App Password is wrong or has spaces — re-enter it with no spaces |
-| `No module named groq` | Dependencies failed to install — re-run the workflow |
-| Re-scoring jobs you've already seen | Workflow permissions aren't set to Read and write — go back to Settings > Actions > General and fix it |
-
-If the error isn't in the table above, copy the red text and paste it into [Claude](https://claude.ai) with a description of what you were trying to do. It will tell you exactly what went wrong.
 
 ### Adjust the schedule
 
@@ -543,7 +537,7 @@ SF_SECURITY_TOKEN=yourtoken
 - YES jobs land at stage `Job Identified`
 - MAYBE jobs land at stage `If you have time`
 - If the same job URL appears on a future run, it's skipped. It won't overwrite whatever stage you've moved it to.
-- `Ghost_Detection__c` is set to `Low Risk`, `Unverified`, or `Ghost Likely` when the ghost detector flags a role. It's left blank for `Verified` and `clean` results.
+- `Ghost_Detection__c` is set to `Low Risk`, `Unverified`, or `Ghost Likely` when the ghost detector flags a role. It's left blank for `clean` results.
 - If credentials aren't set, Pathfinder skips the push silently.
 
 **Also add to GitHub Actions secrets** if you want the daily automated run to push to Salesforce:
@@ -557,13 +551,35 @@ Every YES and MAYBE job in the digest is checked against three signals before th
 
 | Badge | Meaning |
 |---|---|
-| **Verified** (green) | Career page found on company site, posting is fresh, no repost history |
 | **Low Risk** (amber) | Posting is 60+ days old — weak signal only |
 | **Unverified** (orange) | Same or similar role from this company seen in prior searches |
-| **Ghost Likely** (red) | Role not found on company's own careers page, or repost history combined with stale age |
-| *(no badge)* | Inconclusive — not enough signal either way |
+| **Ghost Likely** (red) | Repost history combined with stale age |
+| *(no badge)* | Not enough signal either way |
+
+Each QUALIFY and WORTH A LOOK card also includes one of two lines below the View Role button:
+- **Check Careers Page →** — a direct link to the company's careers or jobs page when one is found
+- **No careers page found — possible ghost.** — shown in red when no standard careers URL responds; treat this as a prompt to verify the role before applying
 
 Ghost detection runs automatically. No configuration needed.
+
+### Why badges may not appear early on
+
+Ghost badges only fire when there is a real signal to report. A fresh LinkedIn listing from the past few days with no prior history will show no badge — this is correct behavior, not a bug.
+
+Badges appear when:
+- A posting is 60+ days old (Low Risk)
+- The same or similar role from the same company has appeared in a previous run (Unverified, Ghost Likely)
+
+Neither of those conditions applies to a brand-new install with no accumulated history. The "No careers page found — possible ghost" line is separate: it appears whenever the career page check returns no result for that company, regardless of how long you've been running.
+
+To confirm that all badge states are rendering correctly at any time, run:
+```
+python pathfinder.py --preview
+```
+
+This sends a sample email with all badge states populated using hardcoded data — no live scraping or API calls required.
+
+Ghost detection becomes more useful over time as the database builds history on companies and roles. Expect meaningful signal after 3–4 weeks of daily runs.
 
 ### Correcting a wrong result
 

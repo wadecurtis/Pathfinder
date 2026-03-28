@@ -273,23 +273,21 @@ The hypothesis category and signal are stored on the job object and rendered as 
 
 **The problem:** Job boards are full of postings that aren't real open roles — companies that left a listing up after filling the position, recurring phantom postings used to build a candidate pipeline, or roles that were budget-approved but never actually got hiring manager sign-off. Scoring these jobs accurately doesn't matter if the job itself is dead. There was no signal for this at all.
 
-**What was built:** `ghost_detector.py` — a post-scoring detection layer that runs on every QUALIFY and NEUTRAL result and returns one of five states:
+**What was built:** `ghost_detector.py` — a post-scoring detection layer that runs on every QUALIFY and NEUTRAL result and returns one of four states:
 
 | State | Meaning | Badge |
 |---|---|---|
-| Verified | All signals positive — career page found, fresh posting, no repost history | Green |
 | Low Risk | Weak signal only — posting is 60+ days old | Amber |
 | Unverified | Moderate signal — same role from this company found in prior search history | Orange |
-| Ghost Likely | Strong signal — role absent from company's own careers page, or repost + age combined | Red |
+| Ghost Likely | Strong signal — repost history combined with stale age | Red |
 | clean | Inconclusive — not enough signal either way | No badge |
 
-**Three signals, weighted by confidence:**
+**Two detection signals:**
 
 1. **Posting age** (weakest) — if `date_posted` is 60+ days ago, that's a weak negative. Stale alone → Low Risk.
 2. **Repost history** (moderate) — queries `job_cache` in SQLite for the same company with a title that's ≥60% word-overlap and an earlier cached date. Found → Unverified. Combined with stale age → Ghost Likely.
-3. **Career page presence** (strongest) — hits DuckDuckGo HTML search for `"[Company]" "[Title]"`, checks the top 8 results, and filters out known job board domains (LinkedIn, Indeed, Glassdoor, Greenhouse, etc.). If a non-board result's domain contains the company name slug → role found (positive). If no such result appears → not found (negative). Not found alone → Ghost Likely. Found + fresh + no repost → Verified.
 
-**Career page result is cached** in a new `career_page_cache` SQLite table with a 7-day TTL. Fresh cache entries skip the HTTP call entirely. Inconclusive results (`None`) are never cached so the next run retries live.
+**Careers page as candidate-facing output (not a signal):** `find_careers_page_url()` probes five standard URL patterns (`/careers`, `/jobs`, `/careers/open-roles`, `/about/careers`, `jobs.domain`) and returns the first that responds 200. The result is added to each email card as a "Check Careers Page →" link when found, or a red "No careers page found — possible ghost." line when not. The URL is cached for 7 days. Career page discovery was intentionally kept out of the detection scoring after DuckDuckGo and Google both blocked programmatic search — direct URL probing is reliable; search-backed presence checks are not.
 
 **Badge rendering in email:** The title row of each card was restructured as a two-cell table (title left, badge right). This is required for Outlook — flexbox doesn't work in email clients. Badge uses inline background and text color with no external CSS dependency.
 
@@ -334,13 +332,41 @@ The hypothesis category and signal are stored on the job object and rendered as 
 6. Writes the override to the new `companies` table (`ghost_override`, `override_set_at`, `override_source = 'email_reply'`).
 7. Marks the email as read so it's not processed again.
 
-**Override is checked first in `detect_ghost()`:** if an active override exists (within 90 days), the function returns immediately — `confirmed_real → "Verified"`, `confirmed_ghost → "Ghost Likely"` — and all three signal checks are skipped entirely.
+**Override is checked first in `detect_ghost()`:** if a `confirmed_ghost` override exists (within 90 days), the function returns `"Ghost Likely"` immediately and skips all signal checks. A `confirmed_real` override causes the function to fall through to normal detection — since "Verified" was removed as a state, confirmed_real simply clears the ghost flag rather than asserting one.
 
 **Preview company exclusion:** The five dummy companies used in `--preview` mode (Acme Consulting, CloudCo, Ridge Partners, BuildCorp, NorthPeak Group) are listed in a `_PREVIEW_COMPANIES` frozenset in `reply_parser.py` and skipped before the matching loop runs. This prevents any coincidental real-world company with the same name from having its override silently blocked, and makes the intent of the exclusion explicit.
 
 **Key insight:** The classification order matters. `_REAL_RE` is tested before `_GHOST_RE`, which is tested before bare-"ghost" matching. This ensures "not a ghost" and "false positive" always win over a sentence that happens to also contain the word "ghost" in describing the detection result rather than the job itself. The two-pass approach (explicit phrases first, bare keyword last) eliminates the most common classification error.
 
 **Wrong turn:** The initial design loaded the override check as a top-level import in `ghost_detector.py`. Moved to a deferred `_tracker()` helper function to keep the module boundary clean and avoid import ordering constraints during testing.
+
+---
+
+## Stage 18: Codebase Refactoring Sprint *(commits)*
+
+**The problem:** After 17 stages of iterative development, `pathfinder.py` had grown to ~920 lines and contained scoring logic, email HTML, Salesforce push, and the main run loop all in one file. Config keys were inconsistent between `config.yaml` and internal code. Logging was a mix of `print()` and `logger.*()`. Dead code from abandoned features was still present. Several modules duplicated constants.
+
+**What was built — one task at a time:**
+
+1. **Seen-jobs TTL** — added a 90-day expiry rule to `run_cache_cleanup()` in `tracker.py`. Previously, seen job IDs accumulated indefinitely with no cleanup.
+
+2. **Career page cache schema fix** — `career_page_cache` table was storing a boolean (result found/not found). Redesigned to store the URL string directly (`url TEXT`), enabling the email card to render the actual link without a second lookup. Migration handles old schema on first run.
+
+3. **Consolidated `_HEADERS`** — HTTP headers were duplicated in `ghost_detector.py`, `fetcher.py`, and `parser.py`. Extracted into `pathfinder/src/_http.py` and imported from there.
+
+4. **Config naming split removed** — `profile_loader.py` was translating `config.yaml`'s `search:` key into `scout` and `discovery` keys internally. `scout.py` read from these translated keys. Removed the translator entirely; everything now reads `search` directly. No more internal/external naming mismatch.
+
+5. **Logging strategy unified** — `pathfinder.py` used `print()` exclusively. Library modules used `logger.*()`. Added `logging.basicConfig` to `pathfinder.py`, added a module-level `logger`, and converted all operational status prints to `logger.info/warning/error`. `print_digest()` kept as `print()` since it's intentional formatted terminal output.
+
+6. **Dead code deleted** — `fetcher.py` and `parser.py` were not imported anywhere. `format_scout_message()` in `scout.py` was not called anywhere. All deleted.
+
+7. **`pathfinder.py` split** — 920-line monolith split into four files:
+   - `pathfinder/src/scorer.py` — `load_config`, `build_scoring_prompt`, `score_job`, `score_all`
+   - `pathfinder/src/digest.py` — `build_html`, `build_no_results_email`, `send_email`, `print_digest`
+   - `pathfinder/src/salesforce.py` — `push_to_salesforce`
+   - `pathfinder.py` — `main()` only (~150 lines)
+
+**Key insight:** Each of these tasks was done and tested one at a time before moving to the next. The correct order mattered: config naming had to be fixed before the split, or the split would have locked in the wrong key names. Logging had to be unified before the split, or the new modules would have needed their own logging setup. Dead code had to be deleted before the split, or it would have been accidentally carried into the new files.
 
 ---
 
@@ -354,7 +380,7 @@ On a daily schedule at 6am PST:
 4. **AI filter** — drops obvious title mismatches in batches before scoring
 5. **Score** — each job evaluated against the candidate profile: YES / MAYBE / NO with a one-sentence reason
 6. **Hypothesis** — YES and MAYBE jobs get a forced-choice hiring hypothesis (Backfill / Capacity / New capability / Recovery / Strategic bet / Unclear) plus a 1-2 sentence signal
-7. **Ghost detection** — each YES and MAYBE job checked against three signals (posting age, repost history, career page presence); result rendered as a badge on the email card
+7. **Ghost detection** — each YES and MAYBE job checked against two signals (posting age, repost history); result rendered as a badge on the email card. A separate careers page probe adds a direct link or a red warning to each card.
 8. **Email** — Outlook-compatible HTML digest sent with funnel metrics, scored cards with reason, hypothesis, and ghost badge, and apply buttons
 9. **Salesforce** — YES and MAYBE jobs pushed as Opportunities, deduped by URL, with stage, source, work type, and ghost detection state mapped to custom fields
 

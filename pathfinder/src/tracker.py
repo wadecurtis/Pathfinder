@@ -40,13 +40,16 @@ def _init_db():
                 cached_at TEXT DEFAULT (datetime('now'))
             )
         """)
+        # Migrate from old schema (keyed on company+title, stored boolean) if present
+        try:
+            conn.execute("SELECT url FROM career_page_cache LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute("DROP TABLE IF EXISTS career_page_cache")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS career_page_cache (
-                company TEXT NOT NULL,
-                title   TEXT NOT NULL,
-                result  INTEGER,
-                cached_at TEXT DEFAULT (datetime('now')),
-                PRIMARY KEY (company, title)
+                company   TEXT PRIMARY KEY,
+                url       TEXT,
+                cached_at TEXT DEFAULT (datetime('now'))
             )
         """)
         conn.execute("""
@@ -111,23 +114,22 @@ def save_job_to_cache(job_data: dict):
 
 # ── Career Page Cache (ghost detector) ───────────────────────────────────────
 
-def get_career_page_cache(company: str, title: str) -> tuple[bool | None, bool]:
+def get_career_page_cache(company: str) -> tuple[str | None, bool]:
     """
-    Look up a career page check result from the cache.
+    Look up a cached careers page URL for a company.
 
-    Returns (result, is_fresh) where:
-      result   — True (found) / False (not found) / None (inconclusive)
+    Returns (url, is_fresh) where:
+      url      — careers page URL string, or None if previously checked and not found
       is_fresh — True if the entry is within the 7-day TTL
 
-    Returns (None, False) when no entry exists.
+    Returns (None, False) when no cache entry exists.
     """
     company_key = company.strip().lower()
-    title_key   = title.strip().lower()
 
     with _get_conn() as conn:
         row = conn.execute(
-            "SELECT result, cached_at FROM career_page_cache WHERE company = ? AND title = ?",
-            (company_key, title_key),
+            "SELECT url, cached_at FROM career_page_cache WHERE company = ?",
+            (company_key,),
         ).fetchone()
 
     if row is None:
@@ -139,24 +141,19 @@ def get_career_page_cache(company: str, title: str) -> tuple[bool | None, bool]:
     except (ValueError, TypeError):
         is_fresh = False
 
-    # SQLite stores NULL as None; 1 → True, 0 → False
-    raw = row["result"]
-    result = None if raw is None else bool(raw)
-    return result, is_fresh
+    return row["url"], is_fresh
 
 
-def set_career_page_cache(company: str, title: str, result: bool | None):
-    """Insert or refresh a career page check result."""
+def set_career_page_cache(company: str, url: str | None):
+    """Store or refresh the careers page URL for a company (None = checked, not found)."""
     company_key = company.strip().lower()
-    title_key   = title.strip().lower()
-    stored      = None if result is None else (1 if result else 0)
 
     with _get_conn() as conn:
         conn.execute(
             """INSERT OR REPLACE INTO career_page_cache
-               (company, title, result, cached_at)
-               VALUES (?, ?, ?, datetime('now'))""",
-            (company_key, title_key, stored),
+               (company, url, cached_at)
+               VALUES (?, ?, datetime('now'))""",
+            (company_key, url),
         )
 
 
@@ -235,25 +232,35 @@ def run_cache_cleanup() -> dict:
     Enforce retention and size rules on the tracker database.
 
     Rules applied (in order):
-      1. job_cache   — delete ALL entries for companies with no activity in 90 days
-      2. job_cache   — cap each company to 10 most-recent entries; drop oldest beyond that
-      3. career_page_cache — delete entries older than 90 days
+      1. seen_jobs   — delete entries older than 90 days
+      2. job_cache   — delete ALL entries for companies with no activity in 90 days
+      3. job_cache   — cap each company to 10 most-recent entries; drop oldest beyond that
+      4. career_page_cache — delete entries older than 90 days
 
     Returns a dict with the row counts affected by each rule:
       {
-        "expired_companies":      int,   # rule 1 — rows removed
-        "trimmed_repost_entries": int,   # rule 2 — rows removed
-        "expired_career_cache":   int,   # rule 3 — rows removed
+        "expired_seen_jobs":      int,   # rule 1 — rows removed
+        "expired_companies":      int,   # rule 2 — rows removed
+        "trimmed_repost_entries": int,   # rule 3 — rows removed
+        "expired_career_cache":   int,   # rule 4 — rows removed
       }
     """
     stats = {
+        "expired_seen_jobs":      0,
         "expired_companies":      0,
         "trimmed_repost_entries": 0,
         "expired_career_cache":   0,
     }
 
     with _get_conn() as conn:
-        # ── Rule 1: remove all entries for companies with 90-day inactivity ──
+        # ── Rule 1: expire seen_jobs older than 90 days ───────────────────────
+        cur = conn.execute(
+            f"""DELETE FROM seen_jobs
+                WHERE added_at < datetime('now', '-{_COMPANY_INACTIVITY_DAYS} days')"""
+        )
+        stats["expired_seen_jobs"] = cur.rowcount
+
+        # ── Rule 2: remove all entries for companies with 90-day inactivity ──
         # A company is "inactive" when its most-recent cached_at is older than
         # the threshold. We delete every row for that company, not just old ones.
         cur = conn.execute(

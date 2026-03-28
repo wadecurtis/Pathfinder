@@ -53,6 +53,20 @@ profile:
 # ── SCORING CRITERIA ──────────────────────────────────────────────────────────
 # What makes a role a YES, MAYBE, or NO.
 # The AI applies these rules exactly as written — customize for your situation.
+#
+# SCORING PHILOSOPHY
+# Job postings describe ideal candidates, not minimum requirements. Years of
+# experience, preferred certifications, and seniority titles in a posting are
+# signals the AI weighs against the candidate's demonstrated outcomes — they
+# are NOT hard gates that trigger NO scores.
+#
+# The ONLY hard gates are items in the disqualify list below. Everything else
+# is weighed. A candidate with strong delivery evidence who meets 80% of
+# stated requirements will score MAYBE, not NO.
+#
+# Put things in disqualify only if you want them to be absolute dealbreakers
+# regardless of everything else. If you're unsure, leave it out — the AI will
+# weigh it appropriately against the candidate's profile.
 
 scoring:
   qualify:

@@ -84,28 +84,26 @@ def scout_jobs(
         skip_ai_filter: If True, bypass the AI relevance filter even if enabled in config.
     """
     settings = load_settings()
-    scout_config = settings.get("scout", {})
-    queries = scout_config.get("queries", [])
+    search_config = settings.get("search", {})
+    queries = search_config.get("queries", [])
     if max_queries is not None:
         queries = queries[:max_queries]
-    locations_raw = scout_config.get(
-        "locations", settings["discovery"].get("default_locations", ["canada"])
-    )
+    locations_raw = search_config.get("locations", ["canada"])
     locations = parse_locations(locations_raw)
-    sources = scout_config.get("sources", settings.get("discovery", {}).get("default_sources", ["linkedin"]))
-    max_per_query = max_per_query_override if max_per_query_override is not None else scout_config.get("max_per_query", 15)
-    hours_old = scout_config.get("hours_old", 336)  # default 2 weeks
-    remote_only = scout_config.get("remote_only", False)
-    ai_filter = False if skip_ai_filter else scout_config.get("ai_filter", False)
-    target_roles = scout_config.get("target_roles", ", ".join(queries))
+    sources = search_config.get("sources", ["linkedin"])
+    max_per_query = max_per_query_override if max_per_query_override is not None else search_config.get("max_per_query", 15)
+    hours_old = search_config.get("hours_old", 336)  # default 2 weeks
+    remote_only = search_config.get("remote_only", False)
+    ai_filter = False if skip_ai_filter else search_config.get("ai_filter", False)
+    target_roles = search_config.get("target_roles", ", ".join(queries))
 
     if not queries:
         logger.warning("No scout queries configured in settings.yaml")
         return []
 
     # Title keyword filters from config (fast pre-filter before AI)
-    title_keywords = [kw.lower() for kw in scout_config.get("title_keywords", [])]
-    title_exclude = [kw.lower() for kw in scout_config.get("title_exclude", [])]
+    title_keywords = [kw.lower() for kw in search_config.get("title_keywords", [])]
+    title_exclude = [kw.lower() for kw in search_config.get("title_exclude", [])]
 
     seen_ids = load_seen_job_ids()
     new_jobs = []
@@ -192,27 +190,3 @@ def scout_jobs(
         _metrics["after_ai_filter"] = len(new_jobs)
 
     return new_jobs
-
-
-def format_scout_message(jobs: list[JobListing], batch_size: int = 5) -> list[str]:
-    """Format new jobs into Telegram messages (split into batches to avoid message limits)."""
-    if not jobs:
-        return []
-
-    messages = []
-    for i in range(0, len(jobs), batch_size):
-        batch = jobs[i : i + batch_size]
-        lines = [f"Found {len(jobs)} new jobs for you:\n"] if i == 0 else []
-
-        for j, job in enumerate(batch, start=i + 1):
-            lines.append(f"*{j}. {job.title}*")
-            lines.append(f"   {job.company} — {job.location}")
-            if job.source:
-                lines.append(f"   Source: {job.source}")
-            if job.url:
-                lines.append(f"   {job.url}")
-            lines.append("")
-
-        messages.append("\n".join(lines))
-
-    return messages

@@ -1,24 +1,21 @@
 """
-Ghost job detection — checks posting freshness, repost history, and career page presence.
+Ghost job detection — checks posting freshness and repost history.
 
-Returns one of five states for any QUALIFY or NEUTRAL job:
-  - "Verified"     — all signals positive: career page found, fresh (<60d), no repost
+Returns one of four states for any QUALIFY or NEUTRAL job:
   - "clean"        — inconclusive; not enough signal to confirm or deny (no badge shown)
   - "Low Risk"     — weak signal only (posting age 60+ days)
   - "Unverified"   — moderate signal (repost history found)
-  - "Ghost Likely" — strong signal (role absent from company careers page,
-                     or multiple signals combining to high confidence)
+  - "Ghost Likely" — strong signal (repost history + stale age together)
 
-Signal weights (applied in priority order):
-  1. Career page present/absent — strongest  → Verified or Ghost Likely alone
-  2. Repost history             — moderate   → Unverified; Ghost Likely if combined with age
-  3. Posting age 60+ d          — weak       → Low Risk alone
+Career page discovery is handled separately by find_careers_page_url(), which
+returns a URL for the candidate to use — it is not a detection signal.
 """
 
 import logging
 import re
 import sqlite3
 from datetime import datetime
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -44,15 +41,14 @@ _JOB_BOARDS = {
     "adzuna.com", "jobillico.com", "eluta.ca", "workopolis.com",
 }
 
-_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "en-CA,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-}
+from ._http import HEADERS as _HEADERS
+
+_CORP_SUFFIXES = re.compile(
+    r"\b(inc|llc|ltd|corp|corporation|co|company|group|solutions|services|"
+    r"consulting|technologies|tech|systems|global|international|staffing|"
+    r"partners?)\b\.?",
+    re.IGNORECASE,
+)
 
 _DATE_FORMATS = [
     "%Y-%m-%d",
@@ -142,111 +138,93 @@ def _check_repost_history(company: str, title: str, current_date_posted: str) ->
         return False
 
 
-def _fetch_career_page(company: str, title: str) -> bool | None:
+def _get_company_domain(company: str, job_url: str = "") -> str:
     """
-    Hit DuckDuckGo and return whether the role appears on the company's own
-    careers page (True), is absent (False), or is indeterminate (None).
-    This is the live-fetch path — call _check_career_page() instead, which
-    gates this behind the 7-day TTL cache.
+    Derive the most likely company domain.
+
+    Tries the job URL first (if it isn't a known job board), then falls back to
+    slugifying the company name and guessing a .com domain.
+    Returns a bare domain like 'plative.com', or '' if none can be derived.
     """
-    query = f'"{company}" "{title}"'
-    url = "https://html.duckduckgo.com/html/"
+    if job_url:
+        try:
+            netloc = urlparse(job_url).netloc.lower().removeprefix("www.")
+            if netloc and not any(board in netloc for board in _JOB_BOARDS):
+                return netloc
+        except Exception:
+            pass
 
-    try:
-        resp = requests.get(
-            url,
-            params={"q": query},
-            headers=_HEADERS,
-            timeout=8,
-        )
-        if resp.status_code != 200:
-            logger.debug(f"DuckDuckGo returned {resp.status_code} for {company}")
-            return None
-
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        # DuckDuckGo HTML results — result URLs live in .result__url or
-        # as href on .result__a anchors.
-        result_links = []
-        for tag in soup.select(".result__url"):
-            text = tag.get_text(strip=True).lower()
-            if text:
-                result_links.append(text)
-        if not result_links:
-            for tag in soup.select(".result__a"):
-                href = (tag.get("href") or "").lower()
-                if href:
-                    result_links.append(href)
-
-        if not result_links:
-            # No results at all — could mean the search returned nothing or
-            # the HTML structure changed; treat as inconclusive.
-            return None
-
-        # Build a slug from the company name to fuzzy-match against domains.
-        company_slug = re.sub(r"[^\w]", "", company.lower())
-        # Use the first 6+ chars for matching (handles "Salesforce" → "salesfo").
-        slug_probe = company_slug[:max(6, len(company_slug) // 2)]
-
-        for link in result_links[:8]:
-            is_board = any(board in link for board in _JOB_BOARDS)
-            if not is_board and slug_probe in link:
-                logger.debug(f"Career page hit for {company}: {link}")
-                return True
-
-        return False
-
-    except requests.exceptions.Timeout:
-        logger.debug(f"Career page check timed out for {company}")
-        return None
-    except Exception as exc:
-        logger.debug(f"Career page check error for {company}: {exc}")
-        return None
+    slug = _CORP_SUFFIXES.sub("", company).strip()
+    slug = re.sub(r"[^\w\s]", "", slug).strip()
+    slug = re.sub(r"\s+", "", slug).lower()
+    return f"{slug}.com" if slug else ""
 
 
-def _check_career_page(company: str, title: str) -> bool | None:
+def find_careers_page_url(company: str, job_url: str = "") -> str | None:
     """
-    Return the career page presence result, using a 7-day TTL cache.
+    Return the URL of the company's careers page, or None if not found.
 
-    Cache hit (fresh)  → return stored result, skip network call.
-    Cache miss / stale → run live fetch, store result, return it.
+    Checks the 7-day cache first. On a cache miss, probes standard paths in
+    order and caches the result (including None, so repeated calls for the same
+    company don't trigger fresh HTTP probes within the TTL window).
+
+    Args:
+        company: Company name — used to derive the domain when job_url is a
+                 job board link (e.g. LinkedIn).
+        job_url: The job posting URL. Used as the domain source if it's not
+                 a known job board.
 
     Returns:
-        True  — role found on a non-aggregator domain matching the company
-        False — search succeeded but no company-site results found
-        None  — search could not be completed (network error, blocked, etc.)
+        URL string (e.g. 'https://plative.com/careers') or None.
     """
     t = _tracker()
 
-    cached_result, is_fresh = t.get_career_page_cache(company, title)
+    cached_url, is_fresh = t.get_career_page_cache(company)
     if is_fresh:
-        logger.debug(f"Career page cache hit (fresh) for {company}: {cached_result}")
-        return cached_result
+        logger.debug(f"Careers page cache hit for {company!r}: {cached_url}")
+        return cached_url
 
-    if cached_result is not None:
-        logger.debug(f"Career page cache stale for {company} — re-fetching")
+    domain = _get_company_domain(company, job_url)
+    if not domain:
+        logger.debug(f"Could not derive domain for {company!r}")
+        return None
 
-    result = _fetch_career_page(company, title)
+    logger.debug(f"Careers page lookup — company={company!r} domain={domain!r}")
 
-    # Only persist definitive results (True/False); don't cache inconclusive
-    # None so the next run still tries a live fetch.
-    if result is not None:
-        t.set_career_page_cache(company, title, result)
+    candidates = [
+        f"https://{domain}/careers",
+        f"https://{domain}/jobs",
+        f"https://{domain}/careers/open-roles",
+        f"https://{domain}/about/careers",
+        f"https://jobs.{domain}",
+    ]
 
-    return result
+    found_url = None
+    for url in candidates:
+        try:
+            resp = requests.get(url, headers=_HEADERS, timeout=5, allow_redirects=True)
+            if resp.status_code == 200:
+                logger.debug(f"Careers page found: {url}")
+                found_url = url
+                break
+        except Exception as exc:
+            logger.debug(f"Careers page probe error for {url}: {exc}")
+
+    t.set_career_page_cache(company, found_url)
+    return found_url
 
 
 # ── Main detection function ───────────────────────────────────────────────────
 
 def detect_ghost(job: dict) -> str:
     """
-    Run all three detection signals and return a ghost state string.
+    Check posting age and repost history and return a ghost state string.
 
     Args:
         job: scored job dict — must have keys: company, title, date_posted
 
     Returns:
-        One of: "Verified", "clean", "Low Risk", "Unverified", "Ghost Likely"
+        One of: "clean", "Low Risk", "Unverified", "Ghost Likely"
     """
     company     = job.get("company", "")
     title       = job.get("title", "")
@@ -256,12 +234,7 @@ def detect_ghost(job: dict) -> str:
         return "clean"
 
     # ── Human override (email reply feedback) ────────────────────────────────
-    # If a reply correction exists within the 90-day TTL, trust it over all
-    # automated signals and skip the rest of the pipeline entirely.
     override = _tracker().get_active_ghost_override(company)
-    if override == "confirmed_real":
-        logger.debug(f"Ghost override (confirmed_real) applied for {company!r}")
-        return "Verified"
     if override == "confirmed_ghost":
         logger.debug(f"Ghost override (confirmed_ghost) applied for {company!r}")
         return "Ghost Likely"
@@ -273,37 +246,14 @@ def detect_ghost(job: dict) -> str:
     # ── Signal 2: Repost history ──────────────────────────────────────────────
     repost = _check_repost_history(company, title, date_posted)
 
-    # ── Signal 3: Career page presence ───────────────────────────────────────
-    career_page = _check_career_page(company, title)
-    # True  = found on company site   → strong positive signal
-    # False = not found on company site → strong negative signal
-    # None  = couldn't determine      → inconclusive, no signal
-
-    logger.debug(
-        f"Ghost signals — {company}: {title}  "
-        f"age={age_days}d stale={stale}  repost={repost}  career_page={career_page}"
-    )
-
     # ── Weighting / decision ──────────────────────────────────────────────────
-    # All three signals clearly positive → confirmed live role.
-    if career_page is True and not stale and not repost:
-        return "Verified"
-
-    # Career page explicitly absent is the single strongest negative signal.
-    if career_page is False:
-        return "Ghost Likely"
-
-    # Repost history + stale age together is high-confidence ghost.
     if repost and stale:
         return "Ghost Likely"
 
-    # Repost alone is a moderate signal.
     if repost:
         return "Unverified"
 
-    # Stale age alone is a weak signal.
     if stale:
         return "Low Risk"
 
-    # No definitive signal in either direction — don't show a badge.
     return "clean"
