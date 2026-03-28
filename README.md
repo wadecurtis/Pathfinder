@@ -521,7 +521,16 @@ If you use Salesforce, Pathfinder can push YES and MAYBE jobs directly into a Sa
 **What you'll need:**
 - A Salesforce org (Developer Edition is free at [developer.salesforce.com](https://developer.salesforce.com))
 - A Salesforce security token. Go to Settings > Reset My Security Token and Salesforce emails it to you.
-- The `Job_Posting_URL__c` custom field on Opportunity (used for deduplication)
+- Custom fields on the Opportunity object (see table below)
+
+**Custom fields to create on Opportunity:**
+
+| API Name | Field Type | Notes |
+|---|---|---|
+| `Job_Posting_URL__c` | URL | Used for deduplication — required |
+| `CP_Source__c` | Picklist | Values: LinkedIn, Job Board, Other |
+| `CP_Work_Type__c` | Picklist | Values: Remote, Hybrid, On-Site |
+| `Ghost_Detection__c` | Text (20) | Populated when ghost detection flags a role |
 
 **Add to `pathfinder/.env`:**
 ```
@@ -534,10 +543,42 @@ SF_SECURITY_TOKEN=yourtoken
 - YES jobs land at stage `Job Identified`
 - MAYBE jobs land at stage `If you have time`
 - If the same job URL appears on a future run, it's skipped. It won't overwrite whatever stage you've moved it to.
+- `Ghost_Detection__c` is set to `Low Risk`, `Unverified`, or `Ghost Likely` when the ghost detector flags a role. It's left blank for `Verified` and `clean` results.
 - If credentials aren't set, Pathfinder skips the push silently.
 
 **Also add to GitHub Actions secrets** if you want the daily automated run to push to Salesforce:
 `SF_USERNAME`, `SF_PASSWORD`, `SF_SECURITY_TOKEN`
+
+---
+
+## Ghost detection
+
+Every YES and MAYBE job in the digest is checked against three signals before the email is sent. The result appears as a small badge in the top-right corner of the job card.
+
+| Badge | Meaning |
+|---|---|
+| **Verified** (green) | Career page found on company site, posting is fresh, no repost history |
+| **Low Risk** (amber) | Posting is 60+ days old — weak signal only |
+| **Unverified** (orange) | Same or similar role from this company seen in prior searches |
+| **Ghost Likely** (red) | Role not found on company's own careers page, or repost history combined with stale age |
+| *(no badge)* | Inconclusive — not enough signal either way |
+
+Ghost detection runs automatically. No configuration needed.
+
+### Correcting a wrong result
+
+If the badge is wrong — a real job flagged as Ghost Likely, or a ghost that slipped through as Verified — reply to that digest email. Write a sentence that mentions the company name and says whether it's real or a ghost. Pathfinder reads your reply at the start of the next run and applies it as an override for 90 days.
+
+**Examples of corrections that work:**
+
+```
+Acme Consulting is not a ghost — I applied and heard back same day.
+False positive on Ridge Partners, the role is live on their site.
+CloudCo confirmed ghost, role has been up for months with no response.
+False negative on BuildCorp — they've had this exact role open since January.
+```
+
+The correction overrides all automated checks for that company until the 90-day window expires, at which point the detector re-evaluates from scratch on the next run.
 
 ---
 

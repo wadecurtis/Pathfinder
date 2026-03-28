@@ -269,18 +269,95 @@ The hypothesis category and signal are stored on the job object and rendered as 
 
 ---
 
+## Stage 15: Ghost Job Detection *(commit 3bcec80)*
+
+**The problem:** Job boards are full of postings that aren't real open roles — companies that left a listing up after filling the position, recurring phantom postings used to build a candidate pipeline, or roles that were budget-approved but never actually got hiring manager sign-off. Scoring these jobs accurately doesn't matter if the job itself is dead. There was no signal for this at all.
+
+**What was built:** `ghost_detector.py` — a post-scoring detection layer that runs on every QUALIFY and NEUTRAL result and returns one of five states:
+
+| State | Meaning | Badge |
+|---|---|---|
+| Verified | All signals positive — career page found, fresh posting, no repost history | Green |
+| Low Risk | Weak signal only — posting is 60+ days old | Amber |
+| Unverified | Moderate signal — same role from this company found in prior search history | Orange |
+| Ghost Likely | Strong signal — role absent from company's own careers page, or repost + age combined | Red |
+| clean | Inconclusive — not enough signal either way | No badge |
+
+**Three signals, weighted by confidence:**
+
+1. **Posting age** (weakest) — if `date_posted` is 60+ days ago, that's a weak negative. Stale alone → Low Risk.
+2. **Repost history** (moderate) — queries `job_cache` in SQLite for the same company with a title that's ≥60% word-overlap and an earlier cached date. Found → Unverified. Combined with stale age → Ghost Likely.
+3. **Career page presence** (strongest) — hits DuckDuckGo HTML search for `"[Company]" "[Title]"`, checks the top 8 results, and filters out known job board domains (LinkedIn, Indeed, Glassdoor, Greenhouse, etc.). If a non-board result's domain contains the company name slug → role found (positive). If no such result appears → not found (negative). Not found alone → Ghost Likely. Found + fresh + no repost → Verified.
+
+**Career page result is cached** in a new `career_page_cache` SQLite table with a 7-day TTL. Fresh cache entries skip the HTTP call entirely. Inconclusive results (`None`) are never cached so the next run retries live.
+
+**Badge rendering in email:** The title row of each card was restructured as a two-cell table (title left, badge right). This is required for Outlook — flexbox doesn't work in email clients. Badge uses inline background and text color with no external CSS dependency.
+
+**Salesforce:** Ghost detection state written to `Ghost_Detection__c` (Text, 20 chars) on the Opportunity record. Field is omitted for `clean` results.
+
+**Key insight:** The career page check is the most useful signal by far. Repost history catches recurring phantom listings. Age alone is a weak prior — a 65-day-old posting is suspicious, not disqualifying. The combination of all three, weighted asymmetrically, produces meaningful signal without too many false positives on legitimate slow-hiring companies.
+
+---
+
+## Stage 16: Cache Management and Retention Rules *(commit 3bcec80)*
+
+**The problem:** `job_cache` and `career_page_cache` had no retention policy. Left unchecked, the repost-history check would eventually match against jobs so old they have no bearing on whether the current listing is a ghost. The career page cache had no expiry at all — a result from six months ago could suppress a live re-check indefinitely.
+
+**What was built:** `run_cache_cleanup()` in `tracker.py`, called as the first step of every pipeline run (before scouting). Three rules enforced in sequence:
+
+1. **90-day company inactivity expiry** — any company whose most-recent `job_cache` entry is older than 90 days gets all its entries deleted. This removes companies that have genuinely gone quiet rather than just trimming individual old records.
+2. **10-entry-per-company cap** — for active companies, keeps only the 10 most-recent cache entries by `cached_at`. Implemented as a correlated subquery that counts how many rows for the same company have a newer or equal timestamp; rows ranked beyond 10 are deleted.
+3. **Career page cache expiry** — entries in `career_page_cache` older than 90 days are deleted. The 7-day TTL in the ghost detector handles re-checks at query time; this sweep removes entries too old to ever be served as fresh.
+
+**Logging:** `run_cache_cleanup()` returns a stats dict. The pipeline prints a single line when records were removed, suppressed entirely on clean runs.
+
+**Key insight:** Rule 1 (company-level expiry, not row-level expiry) was the deliberate choice. Deleting individual old rows would leave partial company history that could still trigger repost detection against a job scraped a year ago. Deleting the whole company's history when they've been inactive treats it as a clean slate, which is the correct behavior for a signal about whether a company is actively cycling postings.
+
+---
+
+## Stage 17: Email Reply Feedback Loop *(commit 3bcec80)*
+
+**The problem:** Ghost detection is a heuristic. DuckDuckGo results are noisy, repost matching is fuzzy, and the career page check fails silently for companies with unusual domain conventions. There was no way to correct a wrong detection without modifying code or the database directly.
+
+**What was built:** A closed-loop feedback mechanism: reply to any Pathfinder digest email with a plain-text correction, and the next pipeline run applies it as an override.
+
+**How it works:**
+
+1. `reply_parser.py` connects to Gmail via IMAP (same credentials as the outbound digest — no additional setup required).
+2. Searches for unread messages with `SUBJECT "Re: Pathfinder"`.
+3. Loads all company names from `job_cache` (canonical spellings from actual scraped data).
+4. For each reply, scans for company name mentions (substring match, case-insensitive).
+5. For each mention, extracts the surrounding sentences and classifies the correction direction:
+   - **`confirmed_real`** — "not a ghost", "confirmed real", "false positive", "still hiring", "actually live", "legit"
+   - **`confirmed_ghost`** — "confirmed ghost", "false negative", "not hiring", "no longer open", "ghost job", "fake posting"
+   - Bare "ghost" without a negation also maps to `confirmed_ghost`
+6. Writes the override to the new `companies` table (`ghost_override`, `override_set_at`, `override_source = 'email_reply'`).
+7. Marks the email as read so it's not processed again.
+
+**Override is checked first in `detect_ghost()`:** if an active override exists (within 90 days), the function returns immediately — `confirmed_real → "Verified"`, `confirmed_ghost → "Ghost Likely"` — and all three signal checks are skipped entirely.
+
+**Preview company exclusion:** The five dummy companies used in `--preview` mode (Acme Consulting, CloudCo, Ridge Partners, BuildCorp, NorthPeak Group) are listed in a `_PREVIEW_COMPANIES` frozenset in `reply_parser.py` and skipped before the matching loop runs. This prevents any coincidental real-world company with the same name from having its override silently blocked, and makes the intent of the exclusion explicit.
+
+**Key insight:** The classification order matters. `_REAL_RE` is tested before `_GHOST_RE`, which is tested before bare-"ghost" matching. This ensures "not a ghost" and "false positive" always win over a sentence that happens to also contain the word "ghost" in describing the detection result rather than the job itself. The two-pass approach (explicit phrases first, bare keyword last) eliminates the most common classification error.
+
+**Wrong turn:** The initial design loaded the override check as a top-level import in `ghost_detector.py`. Moved to a deferred `_tracker()` helper function to keep the module boundary clean and avoid import ordering constraints during testing.
+
+---
+
 ## What the finished system does
 
 On a daily schedule at 6am PST:
 
-1. Searches LinkedIn for Salesforce consulting role titles across Canada
-2. Deduplicates across sources; skips jobs already seen in prior runs (persisted via Actions cache)
-3. Drops obvious keyword mismatches via title/company AI pre-filter
-4. Remaining jobs scored individually against the candidate profile: YES / MAYBE / NO with a one-sentence reason
-5. YES and MAYBE jobs get a hiring hypothesis: forced-choice category (Backfill / Capacity / New capability / Recovery / Strategic bet / Unclear) plus a 1-2 sentence signal from the job posting
-6. Outlook-compatible HTML digest emailed with funnel metrics, scored cards with reason and hypothesis, and apply buttons
-7. YES and MAYBE jobs pushed to Salesforce Career Pipeline as Opportunities, deduped by posting URL, with stage and source mapped
+1. **Reply parse** — connects to Gmail via IMAP, reads any unread Pathfinder reply emails, extracts ghost detection corrections, and writes overrides to the companies table
+2. **Cache cleanup** — expires company records inactive for 90 days, trims each company to 10 repost-history entries, removes career page cache entries older than 90 days
+3. **Scout** — searches LinkedIn for Salesforce consulting role titles across Canada; deduplicates across sources and skips jobs already seen in prior runs (persisted via Actions cache)
+4. **AI filter** — drops obvious title mismatches in batches before scoring
+5. **Score** — each job evaluated against the candidate profile: YES / MAYBE / NO with a one-sentence reason
+6. **Hypothesis** — YES and MAYBE jobs get a forced-choice hiring hypothesis (Backfill / Capacity / New capability / Recovery / Strategic bet / Unclear) plus a 1-2 sentence signal
+7. **Ghost detection** — each YES and MAYBE job checked against three signals (posting age, repost history, career page presence); result rendered as a badge on the email card
+8. **Email** — Outlook-compatible HTML digest sent with funnel metrics, scored cards with reason, hypothesis, and ghost badge, and apply buttons
+9. **Salesforce** — YES and MAYBE jobs pushed as Opportunities, deduped by URL, with stage, source, work type, and ghost detection state mapped to custom fields
 
-**Typical run:** ~300 scraped > ~120 AI filtered > 15-20 scored > 2-5 relevant. Token usage ~50-55k/day (hypothesis adds ~300-400 tokens) against a 100k daily limit on Groq's free tier.
+**Typical run:** ~300 scraped → ~120 AI filtered → 15-20 scored → 2-5 relevant. Token usage ~50-55k/day against a 100k daily limit on Groq's free tier.
 
-**Stack:** Python 3.11 · python-jobspy · Groq (llama-3.3-70b-versatile) · SQLite · Gmail SMTP · simple-salesforce · GitHub Actions
+**Stack:** Python 3.11 · python-jobspy · Groq (llama-3.3-70b-versatile) · SQLite · Gmail SMTP + IMAP · BeautifulSoup · simple-salesforce · GitHub Actions
