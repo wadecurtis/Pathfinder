@@ -27,8 +27,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "pathfinder"))
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), "pathfinder", ".env"), override=True)
 from src.discovery.scout import scout_jobs
+from src.ghost_detector import detect_ghost
 from src.llm_client import get_llm_response
 from src.models import JobListing
+from src.reply_parser import parse_replies
+from src.tracker import run_cache_cleanup
 
 
 # ── Load config ───────────────────────────────────────────────────────────────
@@ -182,6 +185,7 @@ def score_all(jobs: list[JobListing]) -> list[dict]:
             "location":           job.location,
             "url":                job.url,
             "source":             job.source,
+            "date_posted":        job.date_posted,
             "score":              score,
             "reason":             reason,
             "hypothesis_category": hyp_category,
@@ -289,6 +293,14 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
   </td>
 </tr>"""
 
+    # ── Ghost badge colors ────────────────────────────────────────────────────
+    GHOST_BADGE = {
+        "Verified":     ("#166534", "#F0FDF4"),   # green text on green-50
+        "Low Risk":     ("#92400E", "#FEF3C7"),   # amber text on amber-50
+        "Unverified":   ("#9A3412", "#FFEDD5"),   # orange text on orange-50
+        "Ghost Likely": ("#991B1B", "#FEE2E2"),   # red text on red-50
+    }
+
     # ── Card row builder ──────────────────────────────────────────────────────
     def card_row(job, strong=False):
         accent_bg     = TEAL      if strong else MAYBE_ACC
@@ -297,6 +309,20 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
         btn_class     = ""        if strong else "btn-maybe"
         company_color = TEAL      if strong else MUTED
         company_class = "t-teal"  if strong else "t-muted"
+
+        # Ghost detection badge (top-right of title row, hidden when clean)
+        ghost_state = job.get("ghost_detection", "clean")
+        if ghost_state in GHOST_BADGE:
+            badge_fg, badge_bg = GHOST_BADGE[ghost_state]
+            badge_html = (
+                f'<td align="right" valign="top" style="padding-left:8px;white-space:nowrap;">'
+                f'<span style="display:inline-block;background-color:{badge_bg};color:{badge_fg};'
+                f'font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 7px;'
+                f'border-radius:4px;white-space:nowrap;">{ghost_state}</span>'
+                f'</td>'
+            )
+        else:
+            badge_html = ""
 
         hypothesis_html = ""
         if job.get("hypothesis_category") and job.get("hypothesis_signal"):
@@ -316,6 +342,17 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
             </tr>
           </table>"""
 
+        # Title row: job title left, ghost badge right (table layout for Outlook compat)
+        title_row = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation"'
+            f' style="margin:0 0 3px;">'
+            f'<tr>'
+            f'<td style="font-size:17px;font-weight:700;color:{TEXT};" class="t-primary">'
+            f'{job["title"]}</td>'
+            f'{badge_html}'
+            f'</tr></table>'
+        )
+
         return f"""<tr>
   <td style="padding-bottom:10px;">
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
@@ -327,8 +364,7 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
         <td bgcolor="{CARD}" class="bg-card"
             style="background-color:{CARD};padding:18px 20px;border-radius:0 10px 10px 0;
                    border:1px solid {BORDER};border-left:none;">
-          <p style="margin:0 0 3px;font-size:17px;font-weight:700;color:{TEXT};"
-             class="t-primary">{job['title']}</p>
+          {title_row}
           <p style="margin:0 0 2px;font-size:15px;font-weight:600;color:{company_color};"
              class="{company_class}">{job['company']}</p>
           <p style="margin:0 0 10px;font-size:13px;color:{MUTED};"
@@ -598,7 +634,7 @@ def push_to_salesforce(jobs: list[dict]):
             if job.get("hypothesis_category") and job.get("hypothesis_signal"):
                 description += f"\n\nHypothesis ({job['hypothesis_category']}): {job['hypothesis_signal']}"
 
-            sf.Opportunity.create({
+            opp_data = {
                 "Name":               f"{job['title']} - {job['company']}",
                 "AccountId":          account_id,
                 "StageName":          stage,
@@ -608,7 +644,11 @@ def push_to_salesforce(jobs: list[dict]):
                 "Job_Posting_URL__c": job["url"],
                 "CP_Source__c":       cp_source,
                 "CP_Work_Type__c":    cp_work_type,
-            })
+            }
+            ghost_state = job.get("ghost_detection", "clean")
+            if ghost_state and ghost_state != "clean":
+                opp_data["Ghost_Detection__c"] = ghost_state
+            sf.Opportunity.create(opp_data)
             pushed += 1
         except Exception as e:
             print(f"[Salesforce] Failed — {job['company']}: {job['title']} — {e}")
@@ -635,17 +675,32 @@ def main():
              "location": "Remote — Canada", "url": "https://linkedin.com/jobs/view/123",
              "score": "YES", "reason": "Full lifecycle Sales Cloud delivery, SMB focus, remote-friendly — strong match.",
              "hypothesis_category": "New capability",
-             "hypothesis_signal": "Role is titled 'founding consultant' and reports directly to the VP of Delivery — this seat is building the practice, not backfilling it. Candidate's self-implementation background is the exact proof point."},
+             "hypothesis_signal": "Role is titled 'founding consultant' and reports directly to the VP of Delivery — this seat is building the practice, not backfilling it. Candidate's self-implementation background is the exact proof point.",
+             "ghost_detection": "Verified"},
             {"title": "Salesforce Solutions Consultant", "company": "CloudCo",
              "location": "Vancouver, BC (Hybrid)", "url": "https://linkedin.com/jobs/view/456",
              "score": "YES", "reason": "Agentforce implementation valued, declarative-only, mid-market clients.",
              "hypothesis_category": "Capacity",
-             "hypothesis_signal": "Three open roles posted in the same month suggests a pipeline problem, not a single gap. Candidate adds immediate delivery capacity without a ramp period."},
+             "hypothesis_signal": "Three open roles posted in the same month suggests a pipeline problem, not a single gap. Candidate adds immediate delivery capacity without a ramp period.",
+             "ghost_detection": "Ghost Likely"},
             {"title": "CRM Implementation Consultant", "company": "Ridge Partners",
              "location": "Remote — Canada", "url": "https://linkedin.com/jobs/view/789",
              "score": "MAYBE", "reason": "Platform not specified — could be Salesforce, could be HubSpot.",
              "hypothesis_category": "Unclear",
-             "hypothesis_signal": "Posting uses generic CRM language throughout with no platform named — either intentionally platform-agnostic or written by someone outside the team. Worth a quick look at their tech stack before applying."},
+             "hypothesis_signal": "Posting uses generic CRM language throughout with no platform named — either intentionally platform-agnostic or written by someone outside the team. Worth a quick look at their tech stack before applying.",
+             "ghost_detection": "Unverified"},
+            {"title": "Salesforce Admin", "company": "BuildCorp",
+             "location": "Remote — Canada", "url": "https://linkedin.com/jobs/view/101",
+             "score": "MAYBE", "reason": "Admin-level scope, but admin + consulting hybrid is common at this size.",
+             "hypothesis_category": "Backfill",
+             "hypothesis_signal": "Single headcount, no growth language — this is a backfill. Low churn risk for candidate.",
+             "ghost_detection": "Low Risk"},
+            {"title": "Salesforce Functional Consultant", "company": "NorthPeak Group",
+             "location": "Remote — Canada", "url": "https://linkedin.com/jobs/view/202",
+             "score": "MAYBE", "reason": "Role scope aligns but platform stack is ambiguous — follow up required.",
+             "hypothesis_category": "Unclear",
+             "hypothesis_signal": "No tech stack named and the role is listed under both IT and Sales divisions — likely an internal headcount debate still in progress.",
+             "ghost_detection": "clean"},
         ]
         sample_metrics = {
             "raw_scraped": 87, "already_seen": 12, "excluded": 5,
@@ -664,6 +719,28 @@ def main():
     if not os.getenv("GROQ_API_KEY"):
         print("[Pathfinder] ERROR: GROQ_API_KEY is not set. Cannot score jobs.")
         sys.exit(1)
+
+    # 0a. Reply parser — process inbound feedback before anything else so
+    #     ghost overrides are live for both cleanup and scoring this run.
+    reply_stats = parse_replies()
+    if reply_stats["emails_read"]:
+        print(
+            f"[Reply] {reply_stats['emails_read']} feedback email(s) read, "
+            f"{reply_stats['overrides_set']} ghost override(s) written"
+        )
+
+    # 0b. Cache cleanup — enforce retention rules before any work begins
+    cleanup = run_cache_cleanup()
+    total_cleaned = sum(cleanup.values())
+    if total_cleaned:
+        print(
+            f"[Cache] Cleanup: "
+            f"{cleanup['expired_companies']} company records expired (90d inactivity)  "
+            f"{cleanup['trimmed_repost_entries']} repost entries trimmed (10-entry cap)  "
+            f"{cleanup['expired_career_cache']} career page cache entries expired"
+        )
+    else:
+        print("[Cache] Cleanup: nothing to remove")
 
     # 1. Scout — search + optional AI filter
     print("[Pathfinder] Searching...")
@@ -691,6 +768,17 @@ def main():
     metrics["scored_maybe"] = sum(1 for j in scored if j["score"] == "MAYBE")
     metrics["scored_no"]    = sum(1 for j in scored if j["score"] == "NO")
     relevant = [j for j in scored if j["score"] in ("YES", "MAYBE")]
+
+    # Ghost detection — run only on QUALIFY and NEUTRAL results
+    print(f"[Ghost] Running ghost detection on {len(relevant)} relevant listings...")
+    for job in relevant:
+        result = detect_ghost(job)
+        job["ghost_detection"] = result
+        if result != "clean":
+            print(f"  [{result}] {job['company']}: {job['title']}")
+    # Ensure NO-scored jobs have the key set to avoid KeyError in templates
+    for job in scored:
+        job.setdefault("ghost_detection", "clean")
 
     if not relevant:
         print("[Pathfinder] Nothing relevant this run.")
