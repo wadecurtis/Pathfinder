@@ -374,10 +374,10 @@ neutral:
 **`disqualify`**: hard dealbreakers. Any single one scores the role NO immediately:
 ```yaml
 disqualify:
-  - "Requires Apex, LWC, or custom development"
-  - "Requires bilingual French and English"
-  - "Salary below $80K CAD"
-  - "US-only role requiring US work authorization"
+  - "Requires [specific technical skill you don't have]"
+  - "Requires bilingual [language] and English"
+  - "Salary below [your floor]"
+  - "Requires work authorization you don't hold"
 ```
 
 Be specific: `"Requires CPQ certification as mandatory"` not just `"CPQ"`.
