@@ -19,9 +19,6 @@
 
   <!-- Title -->
   <text x="44" y="64" font-size="17" font-weight="700" fill="#0D2F4F">Salesforce Solutions Consultant</text>
-  <!-- Ghost Likely badge -->
-  <rect x="488" y="50" width="90" height="20" rx="4" fill="#FEE2E2"/>
-  <text x="533" y="64" font-size="10" font-weight="700" fill="#991B1B" text-anchor="middle">Ghost Likely</text>
 
   <!-- Company -->
   <text x="44" y="83" font-size="15" font-weight="600" fill="#1D9E75">CloudCo</text>
