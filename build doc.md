@@ -1,4 +1,4 @@
-# Pathfinder: Build Narrative
+# Pathfinder: Cut the Job Search BS -- Build Narrative
 
 ---
 
