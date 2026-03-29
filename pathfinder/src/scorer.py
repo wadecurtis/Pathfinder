@@ -126,7 +126,7 @@ Do not hedge. Make a call.
 
 Respond in exactly this format:
 SCORE: YES / MAYBE / NO
-REASON: one sentence naming the key qualifier or disqualifier that decided the score
+REASON: Two sentences. Sentence 1: name the key qualifier or disqualifier that decided the score. Sentence 2: explain specifically how it aligns with or conflicts with the candidate's background.
 
 If SCORE is YES or MAYBE, also output:
 HYPOTHESIS_CATEGORY: pick exactly one using the definitions below — choose the best fit; use Unclear only if no category fits at all.
@@ -149,9 +149,8 @@ HYPOTHESIS_CATEGORY: pick exactly one using the definitions below — choose the
   Unclear        — Posting lacks enough signal to distinguish between categories. Use only when none
                    of the above fit — not as a default when evidence is thin.
 
-HYPOTHESIS_SIGNAL: Two sentences. Sentence 1: quote or closely paraphrase specific language from the
-posting that supports your category choice. Sentence 2: explain what that signal means about why this
-candidate fits the gap.
+HYPOTHESIS_SIGNAL: One sentence. Quote or closely paraphrase the specific language from the posting
+that supports your category choice.
 
 Do not use em dashes (-) anywhere in your response. Use a plain hyphen (-) instead.
 """
