@@ -12,7 +12,7 @@ Pathfinder searches LinkedIn every morning, scores every posting against your sp
 - **Reply-to-correct:** reply to any digest email to correct a wrong ghost result; the override applies to future runs automatically
 - **Salesforce push:** YES and MAYBE results can be pushed directly into a Salesforce Career Pipeline object (optional)
 
-**Ghost detection gets better the longer Pathfinder runs.** Each daily run builds a history of companies and roles it has seen. After a few weeks, it recognizes when a company is re-posting the same role, a strong signal the position hasn't been filled. A fresh install has no history to draw on. Expect meaningful ghost signal after 3–4 weeks of daily runs.
+**Ghost detection gets better the longer Pathfinder runs.** Each daily run stores every scraped job — company, title, and posting date — in a local database. When the same company re-posts a similar role with a newer date, that's the repost signal. After a few weeks of history, Pathfinder recognizes recurring phantom listings that haven't been filled. A fresh install has no history to draw on. Expect meaningful ghost signal after 3–4 weeks of daily runs.
 
 ![Sample output showing a YES card with hiring hypothesis and a filtered NO card](docs/preview.svg)
 
@@ -607,6 +607,17 @@ Each QUALIFY and WORTH A LOOK card also includes one of two lines below the View
 - **No careers page found - possible ghost.** - shown in red when no standard careers URL responds; treat this as a prompt to verify the role before applying
 
 Ghost detection runs automatically. No configuration needed.
+
+### How the ghost tracker works
+
+Ghost detection is backed by a local database that grows with every run. Two tables drive it:
+
+- **Seen jobs** — records job IDs to prevent re-processing the same posting. Deduplication only; not used for ghost detection.
+- **Job cache** — stores every scraped job with its company, title, and posting date. This is what ghost detection queries.
+
+When a new job comes in, the detector checks the job cache for earlier postings from the same company with a similar title. An earlier date means the role was posted before — the repost signal. Combined with a posting age of 60+ days, that's **Ghost Likely**. A repost signal without the age threshold is **Unverified**.
+
+The cache is capped at 10 entries per company and clears inactive companies after 90 days. A brand-new install has no history, so the repost signal can't fire until a company's role has appeared in at least two separate runs.
 
 ### Why badges may not appear early on
 
