@@ -470,19 +470,27 @@ This makes Pathfinder run every morning automatically. Your computer does not ne
 
 Go to your forked repo on GitHub, then Settings > Secrets and variables > Actions > New repository secret.
 
-Add these five:
+Add these two secrets:
 
 | Name | Value |
 |---|---|
-| `GROQ_API_KEY` | Your Groq key (`gsk_...`) |
-| `GMAIL_SENDER` | `you@gmail.com` |
-| `GMAIL_APP_PASSWORD` | 16-character app password, no spaces |
-| `DIGEST_RECIPIENT` | Where to send the digest (can be same address) |
-| `CONFIG_YAML` | Your full `config.yaml` contents, pasted as-is |
+| `CONFIG` | Your full `config.yaml` contents, pasted as-is |
+| `KEYS` | Your full `pathfinder/.env` contents, pasted as-is |
 
-**Adding `CONFIG_YAML`:** Open your local `config.yaml`, select all, copy, paste into the secret value field. The workflow writes it to disk before each run. Your personal profile and scoring criteria never touch the repo.
+**Adding `CONFIG`:** Open your local `config.yaml`, select all, copy, paste into the secret value field. The workflow writes it to disk before each run. Your personal profile and scoring criteria never touch the repo.
 
-> If `CONFIG_YAML` is not set, the workflow falls back to `config.example.yaml`. The pipeline will run with placeholder values — useful for testing the workflow itself before your config is ready.
+**Adding `KEYS`:** Open your local `pathfinder/.env`, select all, copy, paste into the secret value field. This replaces all individual API key secrets — one secret holds everything:
+```
+GROQ_API_KEY=gsk_...
+GMAIL_SENDER=you@gmail.com
+GMAIL_APP_PASSWORD=yourapppassword
+DIGEST_RECIPIENT=you@gmail.com
+SF_USERNAME=you@yourorg.com
+SF_PASSWORD=yourpassword
+SF_SECURITY_TOKEN=yourtoken
+```
+
+> If `CONFIG` is not set, the workflow falls back to `config.example.yaml`. The pipeline will run with placeholder values — useful for testing the workflow itself before your config is ready.
 
 > **How seen-jobs persist between runs:** Pathfinder uses GitHub's built-in cache system (`actions/cache`) to save the database between daily runs. This works automatically with no extra token or configuration — the default `GITHUB_TOKEN` provided by every Actions run is sufficient.
 
