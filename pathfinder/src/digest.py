@@ -312,9 +312,10 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
         def no_row(job, last=False):
             border = "" if last else f"border-bottom:1px solid {BORDER};"
             return f"""<tr>
-  <td style="padding:11px 16px;{border}">
-    <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:{TEXT};" class="t-primary">{job['company']} &middot; {job['title']}</p>
-    <p style="margin:0;font-size:13px;color:{MUTED};font-style:italic;line-height:1.4;" class="t-muted">{job['reason']}</p>
+  <td style="padding:9px 16px;{border}font-size:13px;color:{MUTED};line-height:1.4;" class="t-muted">
+    <span style="font-weight:600;color:{TEXT};" class="t-primary">{job['title']} &middot; {job['company']}</span>
+    &mdash; {job['reason'].replace('—', '-')}
+    <br><a href="{job['url']}" style="font-size:12px;color:{MUTED};text-decoration:underline;" class="t-muted">View posting</a>
   </td>
 </tr>"""
         rows = "".join(no_row(j, last=(i == len(no_jobs)-1)) for i, j in enumerate(no_jobs))
