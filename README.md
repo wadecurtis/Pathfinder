@@ -397,9 +397,26 @@ search:
 
   hours_old: 336      # How far back to look (336 = 2 weeks)
   max_per_query: 20   # Results per search query
+
+  target_roles: >
+    Describe in plain language what you're actually looking for.
+    Used by the AI to filter results before scoring — be specific
+    about platform, role type, and what you want to exclude.
+
+  title_keywords:
+    - "your primary platform or skill"
+    - "target role type"
+
+  title_exclude:
+    - "roles you never want to see"
+    - "unrelated job types that match your queries by accident"
 ```
 
 Add as many `queries` as you have target titles. More queries means broader coverage.
+
+**`target_roles`** is a plain-language description the AI uses to pre-filter listings before full scoring. Write it as if you're briefing a recruiter: what platform, what kind of role, what to exclude. This runs before your `qualify`/`disqualify` rules and catches obvious mismatches early.
+
+**`title_keywords`** and **`title_exclude`** are simple keyword filters applied to job titles before any AI processing. Add terms your target roles always contain (`title_keywords`) and terms that indicate roles you never want (`title_exclude`). Common false positives from broad queries (account executive, recruiter, warehouse, etc.) belong in `title_exclude`.
 
 ---
 
