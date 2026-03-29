@@ -1,18 +1,18 @@
 # Pathfinder: Automated Job Search Digest
 
-Job searching produces too many listings and no good way to evaluate them. Reading through dozens of postings a day to figure out which ones actually fit your background takes real time — and most of them don't fit. The ones that do are buried.
+Job searching produces too many listings and no good way to evaluate them. Reading through dozens of postings a day to figure out which ones actually fit your background takes real time, and most of them don't fit. The ones that do are buried.
 
 Pathfinder searches LinkedIn every morning, scores every posting against your specific background using AI, and emails you only the roles worth pursuing. Typically 2–5 results out of 300+ raw listings. It runs automatically on GitHub and costs nothing to operate.
 
 **What's in each digest:**
-- **AI scoring** — YES, MAYBE, or NO with a plain-language reason for every posting
-- **Hiring hypothesis** — why the role is open: backfill, new capability, recovery from a failed implementation, capacity growth, or strategic bet — with specific language from the posting to back it up
-- **Ghost detection** — a badge on any posting showing signs of not being actively filled, based on age and repost history
-- **Careers page link** — a direct link to the company's jobs page when one can be found, or a flagged warning when it can't
-- **Reply-to-correct** — reply to any digest email to correct a wrong ghost result; the override applies to future runs automatically
-- **Salesforce push** — YES and MAYBE results can be pushed directly into a Salesforce Career Pipeline object (optional)
+- **AI scoring:** YES, MAYBE, or NO with a plain-language reason for every posting
+- **Hiring hypothesis:** why the role is open: backfill, new capability, recovery from a failed implementation, capacity growth, or strategic bet, with specific language from the posting to back it up
+- **Ghost detection:** a badge on any posting showing signs of not being actively filled, based on age and repost history
+- **Careers page link:** a direct link to the company's jobs page when one can be found, or a flagged warning when it can't
+- **Reply-to-correct:** reply to any digest email to correct a wrong ghost result; the override applies to future runs automatically
+- **Salesforce push:** YES and MAYBE results can be pushed directly into a Salesforce Career Pipeline object (optional)
 
-**Ghost detection gets better the longer Pathfinder runs.** Each daily run builds a history of companies and roles it has seen. After a few weeks, it recognizes when a company is re-posting the same role — a strong signal the position hasn't been filled. A fresh install has no history to draw on. Expect meaningful ghost signal after 3–4 weeks of daily runs.
+**Ghost detection gets better the longer Pathfinder runs.** Each daily run builds a history of companies and roles it has seen. After a few weeks, it recognizes when a company is re-posting the same role, a strong signal the position hasn't been filled. A fresh install has no history to draw on. Expect meaningful ghost signal after 3–4 weeks of daily runs.
 
 ![Sample output showing a YES card with hiring hypothesis and a filtered NO card](docs/preview.svg)
 
@@ -26,13 +26,12 @@ All commands you'll use. Details are in the episodes below.
 
 | Command | What it does |
 |---|---|
-| `bash pathfinder/setup.sh` | First-time setup: creates `.venv`, installs deps, copies `.env` |
-| `.venv\Scripts\activate` | Activate virtual environment — Windows (Command Prompt) |
-| `.venv\Scripts\Activate.ps1` | Activate virtual environment — Windows (PowerShell) |
-| `source .venv/bin/activate` | Activate virtual environment — Mac |
+| See Episode 3 | First-time setup: creates `.venv`, installs deps, copies `.env` |
+| `.\.venv\Scripts\Activate.ps1` | Activate virtual environment (Windows - PowerShell) |
+| `source .venv/bin/activate` | Activate virtual environment (Mac) |
 | `python pathfinder.py --preview` | Send a sample digest email (no API calls, no job queries) |
 | `python pathfinder.py --test` | Run pipeline in test mode (2 queries, capped results) |
-| `bash pathfinder/clean_db.sh` | Reset seen-jobs database — re-scores everything on next run |
+| `bash pathfinder/clean_db.sh` | Reset seen-jobs database (Mac/Git Bash) |
 
 ### Git
 
@@ -41,7 +40,7 @@ All commands you'll use. Details are in the episodes below.
 | `git clone https://github.com/YOUR_USERNAME/Pathfinder.git` | Clone your fork locally |
 | `git add .github/workflows/daily.yml` | Stage a schedule change |
 | `git commit -m "update schedule"` | Commit staged changes |
-| `git push` | Push to GitHub — next automated run uses the updated config |
+| `git push` | Push to GitHub - next automated run uses the updated config |
 
 ### VS Code
 
@@ -184,37 +183,37 @@ Replace `YOUR_USERNAME` with your GitHub username.
 
 ### Run setup
 
-The setup script creates your Python environment, installs dependencies, and copies the config template. Run it from the Pathfinder folder:
+**Windows (PowerShell - VS Code terminal):**
 
-**Windows and Mac:**
+Run these four commands in order from the Pathfinder folder:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install --upgrade pip
+pip install -r pathfinder/requirements.txt
+```
+
+> If PowerShell says "running scripts is disabled" on the second line: run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` then try again.
+
+**Mac:**
 ```
 bash pathfinder/setup.sh
 ```
 
-> **Windows note:** Run this in Git Bash, not PowerShell or Command Prompt. Git Bash is installed with Git. Search "Git Bash" in the Start menu. If you get a "bash: command not found" error in PowerShell, open Git Bash directly and run the command from there.
-
-The script will:
+This will:
 - Create a `.venv` virtual environment
 - Install all Python dependencies
-- Copy `pathfinder/.env.example` to `pathfinder/.env`
-
-You'll see green confirmation messages for each step.
+- Copy `pathfinder/.env.example` to `pathfinder/.env` (Mac only - Windows: copy it manually or see Episode 4)
 
 ### Activate the virtual environment
 
-After setup, activate `.venv` before running any Python commands:
-
-**Windows (Command Prompt):**
-```
-.venv\Scripts\activate
-```
+Every time you open a new terminal, activate `.venv` before running any Python commands:
 
 **Windows (PowerShell):**
+```powershell
+.\.venv\Scripts\Activate.ps1
 ```
-.venv\Scripts\Activate.ps1
-```
-
-> If PowerShell says "running scripts is disabled": `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` then try again.
 
 **Mac:**
 ```
@@ -229,13 +228,13 @@ You'll see `(.venv)` at the start of your terminal line when it's active. You ne
 
 The two hardest parts of config.yaml to write are your `highlights` and your `scoring` criteria. These prompts help you get them right before you fill in the file.
 
-### Prompt 1 — Build your highlights
+### Prompt 1 - Build your highlights
 
 Paste this into [Claude](https://claude.ai) or ChatGPT and answer the questions it asks. Then paste the result into the `highlights:` section of `config.yaml`.
 
 ```
 I'm setting up an automated job scoring tool that evaluates postings against my background.
-The tool reads a list of "highlights" — specific, evidence-based facts about my experience —
+The tool reads a list of "highlights" - specific, evidence-based facts about my experience -
 and uses them to decide whether a job is a YES, MAYBE, or NO for me.
 
 I need you to interview me to build this list. Ask me 6-8 questions, one at a time, that will
@@ -254,7 +253,7 @@ Keep each bullet to one sentence. Be specific and concrete. No vague claims like
 or "fast learner." If I give you vague answers, push back and ask for specifics.
 ```
 
-### Prompt 2 — Validate your scoring criteria
+### Prompt 2 - Validate your scoring criteria
 
 Once you have a draft `qualify`, `neutral`, and `disqualify` list, paste this into Claude or ChatGPT along with a few real job descriptions you've seen recently. It will tell you how each would score and whether your criteria are calibrated correctly.
 
@@ -304,7 +303,7 @@ First, copy the example config to create your own:
 cp config.example.yaml config.yaml
 ```
 
-`config.yaml` is gitignored — it will never be committed or pushed to GitHub. Your personal data stays on your machine.
+`config.yaml` is gitignored - it will never be committed or pushed to GitHub. Your personal data stays on your machine.
 
 ### pathfinder/.env
 
@@ -455,14 +454,14 @@ Activate the virtual environment first (see Episode 3).
 **`No new listings found` during repeated test runs**
 Jobs seen in a previous run are filtered out automatically. To reset so the same listings appear again:
 
-*Mac / Git Bash:*
-```
-bash pathfinder/clean_db.sh
+*Windows (PowerShell):*
+```powershell
+python -c "import sqlite3; conn = sqlite3.connect('pathfinder/data/tracker.db'); conn.execute('DELETE FROM seen_jobs'); conn.commit(); conn.close(); print('Cleared')"
 ```
 
-*Windows (PowerShell):*
+*Mac:*
 ```
-python -c "import sqlite3; conn = sqlite3.connect('pathfinder/data/tracker.db'); conn.execute('DELETE FROM seen_jobs'); conn.commit(); conn.close(); print('Cleared')"
+bash pathfinder/clean_db.sh
 ```
 
 **`No new listings found` (not a testing issue)**
@@ -487,7 +486,7 @@ Add these two secrets:
 
 **Adding `CONFIG`:** Open your local `config.yaml`, select all, copy, paste into the secret value field. The workflow writes it to disk before each run. Your personal profile and scoring criteria never touch the repo.
 
-**Adding `KEYS`:** Open your local `pathfinder/.env`, select all, copy, paste into the secret value field. This replaces all individual API key secrets — one secret holds everything:
+**Adding `KEYS`:** Open your local `pathfinder/.env`, select all, copy, paste into the secret value field. This replaces all individual API key secrets - one secret holds everything:
 ```
 GROQ_API_KEY=gsk_...
 GMAIL_SENDER=you@gmail.com
@@ -498,9 +497,9 @@ SF_PASSWORD=yourpassword
 SF_SECURITY_TOKEN=yourtoken
 ```
 
-> If `CONFIG` is not set, the workflow falls back to `config.example.yaml`. The pipeline will run with placeholder values — useful for testing the workflow itself before your config is ready.
+> If `CONFIG` is not set, the workflow falls back to `config.example.yaml`. The pipeline will run with placeholder values - useful for testing the workflow itself before your config is ready.
 
-> **How seen-jobs persist between runs:** Pathfinder uses GitHub's built-in cache system (`actions/cache`) to save the database between daily runs. This works automatically with no extra token or configuration — the default `GITHUB_TOKEN` provided by every Actions run is sufficient.
+> **How seen-jobs persist between runs:** Pathfinder uses GitHub's built-in cache system (`actions/cache`) to save the database between daily runs. This works automatically with no extra token or configuration - the default `GITHUB_TOKEN` provided by every Actions run is sufficient.
 
 ### Trigger a test run
 
@@ -552,7 +551,7 @@ If you use Salesforce, Pathfinder can push YES and MAYBE jobs directly into a Sa
 
 | API Name | Field Type | Notes |
 |---|---|---|
-| `Job_Posting_URL__c` | URL | Used for deduplication — required |
+| `Job_Posting_URL__c` | URL | Used for deduplication - required |
 | `CP_Source__c` | Picklist | Values: LinkedIn, Job Board, Other |
 | `CP_Work_Type__c` | Picklist | Values: Remote, Hybrid, On-Site |
 | `Ghost_Detection__c` | Text (20) | Populated when ghost detection flags a role |
@@ -571,7 +570,7 @@ SF_SECURITY_TOKEN=yourtoken
 - `Ghost_Detection__c` is set to `Low Risk`, `Unverified`, or `Ghost Likely` when the ghost detector flags a role. It's left blank for `clean` results.
 - If credentials aren't set, Pathfinder skips the push silently.
 
-These are included in your `pathfinder/.env` file. When you copy your `.env` contents into the `KEYS` GitHub secret, the Salesforce credentials are included automatically — no separate secrets needed.
+These are included in your `pathfinder/.env` file. When you copy your `.env` contents into the `KEYS` GitHub secret, the Salesforce credentials are included automatically - no separate secrets needed.
 
 ---
 
@@ -581,47 +580,47 @@ Every YES and MAYBE job in the digest is checked against three signals before th
 
 | Badge | Meaning |
 |---|---|
-| **Low Risk** (amber) | Posting is 60+ days old — weak signal only |
+| **Low Risk** (amber) | Posting is 60+ days old - weak signal only |
 | **Unverified** (orange) | Same or similar role from this company seen in prior searches |
 | **Ghost Likely** (red) | Repost history combined with stale age |
 | *(no badge)* | Not enough signal either way |
 
 Each QUALIFY and WORTH A LOOK card also includes one of two lines below the View Role button:
-- **Check Careers Page →** — a direct link to the company's careers or jobs page when one is found
-- **No careers page found - possible ghost.** — shown in red when no standard careers URL responds; treat this as a prompt to verify the role before applying
+- **Check Careers Page →** - a direct link to the company's careers or jobs page when one is found
+- **No careers page found - possible ghost.** - shown in red when no standard careers URL responds; treat this as a prompt to verify the role before applying
 
 Ghost detection runs automatically. No configuration needed.
 
 ### Why badges may not appear early on
 
-Ghost badges only fire when there is a real signal to report. A fresh LinkedIn listing from the past few days with no prior history will show no badge — this is correct behavior, not a bug.
+Ghost badges only fire when there is a real signal to report. A fresh LinkedIn listing from the past few days with no prior history will show no badge - this is correct behavior, not a bug.
 
 Badges appear when:
 - A posting is 60+ days old (Low Risk)
 - The same or similar role from the same company has appeared in a previous run (Unverified, Ghost Likely)
 
-Neither of those conditions applies to a brand-new install with no accumulated history. The "No careers page found — possible ghost" line is separate: it appears whenever the career page check returns no result for that company, regardless of how long you've been running.
+Neither of those conditions applies to a brand-new install with no accumulated history. The "No careers page found - possible ghost" line is separate: it appears whenever the career page check returns no result for that company, regardless of how long you've been running.
 
 To confirm that all badge states are rendering correctly at any time, run:
 ```
 python pathfinder.py --preview
 ```
 
-This sends a sample email with all badge states populated using hardcoded data — no live scraping or API calls required.
+This sends a sample email with all badge states populated using hardcoded data - no live scraping or API calls required.
 
 Ghost detection becomes more useful over time as the database builds history on companies and roles. Expect meaningful signal after 3–4 weeks of daily runs.
 
 ### Correcting a wrong result
 
-If the badge is wrong — a real job flagged as Ghost Likely, or a ghost that slipped through as Verified — reply to that digest email. Write a sentence that mentions the company name and says whether it's real or a ghost. Pathfinder reads your reply at the start of the next run and applies it as an override for 90 days.
+If the badge is wrong - a real job flagged as Ghost Likely, or a ghost that slipped through as Verified - reply to that digest email. Write a sentence that mentions the company name and says whether it's real or a ghost. Pathfinder reads your reply at the start of the next run and applies it as an override for 90 days.
 
 **Examples of corrections that work:**
 
 ```
-Acme Consulting is not a ghost — I applied and heard back same day.
+Acme Consulting is not a ghost - I applied and heard back same day.
 False positive on Ridge Partners, the role is live on their site.
 CloudCo confirmed ghost, role has been up for months with no response.
-False negative on BuildCorp — they've had this exact role open since January.
+False negative on BuildCorp - they've had this exact role open since January.
 ```
 
 The correction overrides all automated checks for that company until the 90-day window expires, at which point the detector re-evaluates from scratch on the next run.
@@ -641,6 +640,13 @@ Everything is in `config.yaml`. After any change, push it to GitHub and the next
 **Want a stricter YES?** Move items from `neutral` into `disqualify`.
 
 To reset seen jobs so Pathfinder re-scores everything (useful after changing scoring criteria):
+
+*Windows (PowerShell):*
+```powershell
+python -c "import sqlite3; conn = sqlite3.connect('pathfinder/data/tracker.db'); conn.execute('DELETE FROM seen_jobs'); conn.commit(); conn.close(); print('Cleared')"
+```
+
+*Mac:*
 ```
 bash pathfinder/clean_db.sh
 ```
