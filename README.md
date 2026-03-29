@@ -6,7 +6,7 @@ Pathfinder searches LinkedIn every morning, scores every posting against your sp
 
 **What's in each digest:**
 - **AI scoring:** YES, MAYBE, or NO with a plain-language reason for every posting
-- **Hiring hypothesis:** two signals per relevant posting — why the company is hiring (backfill, new capability, capacity, recovery, or strategic bet) and what specific value the candidate brings to fill that gap
+- **Hiring hypothesis:** two signals per relevant posting - why the company is hiring (backfill, new capability, capacity, recovery, or strategic bet) and what specific value the candidate brings to fill that gap
 - **Ghost detection:** a badge on any posting showing signs of not being actively filled, based on age and repost history
 - **Careers page link:** a direct link to the company's jobs page when one can be found, or a flagged warning when it can't
 - **Reply-to-correct:** reply to any digest email to correct a wrong ghost result; the override applies to future runs automatically
@@ -311,7 +311,7 @@ First, copy the example config to create your own:
 cp config.example.yaml config.yaml
 ```
 
-`config.yaml` will be committed to your private fork — that's how GitHub Actions reads it. Your fork is private, so this is safe.
+`config.yaml` will be committed to your private fork - that's how GitHub Actions reads it. Your fork is private, so this is safe.
 
 ### pathfinder/.env
 
@@ -408,7 +408,7 @@ search:
 
   target_roles: >
     Describe in plain language what you're actually looking for.
-    Used by the AI to filter results before scoring — be specific
+    Used by the AI to filter results before scoring - be specific
     about platform, role type, and what you want to exclude.
 
   title_keywords:
@@ -618,10 +618,10 @@ Ghost detection runs automatically. No configuration needed.
 
 Ghost detection is backed by a local database that grows with every run. Two tables drive it:
 
-- **Seen jobs** — records job IDs to prevent re-processing the same posting. Deduplication only; not used for ghost detection.
-- **Job cache** — stores every scraped job with its company, title, and posting date. This is what ghost detection queries.
+- **Seen jobs** - records job IDs to prevent re-processing the same posting. Deduplication only; not used for ghost detection.
+- **Job cache** - stores every scraped job with its company, title, and posting date. This is what ghost detection queries.
 
-When a new job comes in, the detector checks the job cache for earlier postings from the same company with a similar title. An earlier date means the role was posted before — the repost signal. Combined with a posting age of 60+ days, that's **Ghost Likely**. A repost signal without the age threshold is **Unverified**.
+When a new job comes in, the detector checks the job cache for earlier postings from the same company with a similar title. An earlier date means the role was posted before - the repost signal. Combined with a posting age of 60+ days, that's **Ghost Likely**. A repost signal without the age threshold is **Unverified**.
 
 The cache is capped at 10 entries per company and clears inactive companies after 90 days. A brand-new install has no history, so the repost signal can't fire until a company's role has appeared in at least two separate runs.
 

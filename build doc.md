@@ -271,41 +271,41 @@ The hypothesis category and signal are stored on the job object and rendered as 
 
 ## Stage 15: Ghost Job Detection *(commit 3bcec80)*
 
-**The problem:** Job boards are full of postings that aren't real open roles — companies that left a listing up after filling the position, recurring phantom postings used to build a candidate pipeline, or roles that were budget-approved but never actually got hiring manager sign-off. Scoring these jobs accurately doesn't matter if the job itself is dead. There was no signal for this at all.
+**The problem:** Job boards are full of postings that aren't real open roles - companies that left a listing up after filling the position, recurring phantom postings used to build a candidate pipeline, or roles that were budget-approved but never actually got hiring manager sign-off. Scoring these jobs accurately doesn't matter if the job itself is dead. There was no signal for this at all.
 
-**What was built:** `ghost_detector.py` — a post-scoring detection layer that runs on every QUALIFY and NEUTRAL result and returns one of four states:
+**What was built:** `ghost_detector.py` - a post-scoring detection layer that runs on every QUALIFY and NEUTRAL result and returns one of four states:
 
 | State | Meaning | Badge |
 |---|---|---|
-| Low Risk | Weak signal only — posting is 60+ days old | Amber |
-| Unverified | Moderate signal — same role from this company found in prior search history | Orange |
-| Ghost Likely | Strong signal — repost history combined with stale age | Red |
-| clean | Inconclusive — not enough signal either way | No badge |
+| Low Risk | Weak signal only - posting is 60+ days old | Amber |
+| Unverified | Moderate signal - same role from this company found in prior search history | Orange |
+| Ghost Likely | Strong signal - repost history combined with stale age | Red |
+| clean | Inconclusive - not enough signal either way | No badge |
 
 **Two detection signals:**
 
-1. **Posting age** (weakest) — if `date_posted` is 60+ days ago, that's a weak negative. Stale alone → Low Risk.
-2. **Repost history** (moderate) — queries `job_cache` in SQLite for the same company with a title that's ≥60% word-overlap and an earlier cached date. Found → Unverified. Combined with stale age → Ghost Likely.
+1. **Posting age** (weakest) - if `date_posted` is 60+ days ago, that's a weak negative. Stale alone → Low Risk.
+2. **Repost history** (moderate) - queries `job_cache` in SQLite for the same company with a title that's ≥60% word-overlap and an earlier cached date. Found → Unverified. Combined with stale age → Ghost Likely.
 
-**Careers page as candidate-facing output (not a signal):** `find_careers_page_url()` probes five standard URL patterns (`/careers`, `/jobs`, `/careers/open-roles`, `/about/careers`, `jobs.domain`) and returns the first that responds 200. The result is added to each email card as a "Check Careers Page →" link when found, or a red "No careers page found — possible ghost." line when not. The URL is cached for 7 days. Career page discovery was intentionally kept out of the detection scoring after DuckDuckGo and Google both blocked programmatic search — direct URL probing is reliable; search-backed presence checks are not.
+**Careers page as candidate-facing output (not a signal):** `find_careers_page_url()` probes five standard URL patterns (`/careers`, `/jobs`, `/careers/open-roles`, `/about/careers`, `jobs.domain`) and returns the first that responds 200. The result is added to each email card as a "Check Careers Page →" link when found, or a red "No careers page found - possible ghost." line when not. The URL is cached for 7 days. Career page discovery was intentionally kept out of the detection scoring after DuckDuckGo and Google both blocked programmatic search - direct URL probing is reliable; search-backed presence checks are not.
 
-**Badge rendering in email:** The title row of each card was restructured as a two-cell table (title left, badge right). This is required for Outlook — flexbox doesn't work in email clients. Badge uses inline background and text color with no external CSS dependency.
+**Badge rendering in email:** The title row of each card was restructured as a two-cell table (title left, badge right). This is required for Outlook - flexbox doesn't work in email clients. Badge uses inline background and text color with no external CSS dependency.
 
 **Salesforce:** Ghost detection state written to `Ghost_Detection__c` (Text, 20 chars) on the Opportunity record. Field is omitted for `clean` results.
 
-**Key insight:** The career page check is the most useful signal by far. Repost history catches recurring phantom listings. Age alone is a weak prior — a 65-day-old posting is suspicious, not disqualifying. The combination of all three, weighted asymmetrically, produces meaningful signal without too many false positives on legitimate slow-hiring companies.
+**Key insight:** The career page check is the most useful signal by far. Repost history catches recurring phantom listings. Age alone is a weak prior - a 65-day-old posting is suspicious, not disqualifying. The combination of all three, weighted asymmetrically, produces meaningful signal without too many false positives on legitimate slow-hiring companies.
 
 ---
 
 ## Stage 16: Cache Management and Retention Rules *(commit 3bcec80)*
 
-**The problem:** `job_cache` and `career_page_cache` had no retention policy. Left unchecked, the repost-history check would eventually match against jobs so old they have no bearing on whether the current listing is a ghost. The career page cache had no expiry at all — a result from six months ago could suppress a live re-check indefinitely.
+**The problem:** `job_cache` and `career_page_cache` had no retention policy. Left unchecked, the repost-history check would eventually match against jobs so old they have no bearing on whether the current listing is a ghost. The career page cache had no expiry at all - a result from six months ago could suppress a live re-check indefinitely.
 
 **What was built:** `run_cache_cleanup()` in `tracker.py`, called as the first step of every pipeline run (before scouting). Three rules enforced in sequence:
 
-1. **90-day company inactivity expiry** — any company whose most-recent `job_cache` entry is older than 90 days gets all its entries deleted. This removes companies that have genuinely gone quiet rather than just trimming individual old records.
-2. **10-entry-per-company cap** — for active companies, keeps only the 10 most-recent cache entries by `cached_at`. Implemented as a correlated subquery that counts how many rows for the same company have a newer or equal timestamp; rows ranked beyond 10 are deleted.
-3. **Career page cache expiry** — entries in `career_page_cache` older than 90 days are deleted. The 7-day TTL in the ghost detector handles re-checks at query time; this sweep removes entries too old to ever be served as fresh.
+1. **90-day company inactivity expiry** - any company whose most-recent `job_cache` entry is older than 90 days gets all its entries deleted. This removes companies that have genuinely gone quiet rather than just trimming individual old records.
+2. **10-entry-per-company cap** - for active companies, keeps only the 10 most-recent cache entries by `cached_at`. Implemented as a correlated subquery that counts how many rows for the same company have a newer or equal timestamp; rows ranked beyond 10 are deleted.
+3. **Career page cache expiry** - entries in `career_page_cache` older than 90 days are deleted. The 7-day TTL in the ghost detector handles re-checks at query time; this sweep removes entries too old to ever be served as fresh.
 
 **Logging:** `run_cache_cleanup()` returns a stats dict. The pipeline prints a single line when records were removed, suppressed entirely on clean runs.
 
@@ -321,18 +321,18 @@ The hypothesis category and signal are stored on the job object and rendered as 
 
 **How it works:**
 
-1. `reply_parser.py` connects to Gmail via IMAP (same credentials as the outbound digest — no additional setup required).
+1. `reply_parser.py` connects to Gmail via IMAP (same credentials as the outbound digest - no additional setup required).
 2. Searches for unread messages with `SUBJECT "Re: Pathfinder"`.
 3. Loads all company names from `job_cache` (canonical spellings from actual scraped data).
 4. For each reply, scans for company name mentions (substring match, case-insensitive).
 5. For each mention, extracts the surrounding sentences and classifies the correction direction:
-   - **`confirmed_real`** — "not a ghost", "confirmed real", "false positive", "still hiring", "actually live", "legit"
-   - **`confirmed_ghost`** — "confirmed ghost", "false negative", "not hiring", "no longer open", "ghost job", "fake posting"
+   - **`confirmed_real`** - "not a ghost", "confirmed real", "false positive", "still hiring", "actually live", "legit"
+   - **`confirmed_ghost`** - "confirmed ghost", "false negative", "not hiring", "no longer open", "ghost job", "fake posting"
    - Bare "ghost" without a negation also maps to `confirmed_ghost`
 6. Writes the override to the new `companies` table (`ghost_override`, `override_set_at`, `override_source = 'email_reply'`).
 7. Marks the email as read so it's not processed again.
 
-**Override is checked first in `detect_ghost()`:** if a `confirmed_ghost` override exists (within 90 days), the function returns `"Ghost Likely"` immediately and skips all signal checks. A `confirmed_real` override causes the function to fall through to normal detection — since "Verified" was removed as a state, confirmed_real simply clears the ghost flag rather than asserting one.
+**Override is checked first in `detect_ghost()`:** if a `confirmed_ghost` override exists (within 90 days), the function returns `"Ghost Likely"` immediately and skips all signal checks. A `confirmed_real` override causes the function to fall through to normal detection - since "Verified" was removed as a state, confirmed_real simply clears the ghost flag rather than asserting one.
 
 **Preview company exclusion:** The five dummy companies used in `--preview` mode (Acme Consulting, CloudCo, Ridge Partners, BuildCorp, NorthPeak Group) are listed in a `_PREVIEW_COMPANIES` frozenset in `reply_parser.py` and skipped before the matching loop runs. This prevents any coincidental real-world company with the same name from having its override silently blocked, and makes the intent of the exclusion explicit.
 
@@ -346,25 +346,25 @@ The hypothesis category and signal are stored on the job object and rendered as 
 
 **The problem:** After 17 stages of iterative development, `pathfinder.py` had grown to ~920 lines and contained scoring logic, email HTML, Salesforce push, and the main run loop all in one file. Config keys were inconsistent between `config.yaml` and internal code. Logging was a mix of `print()` and `logger.*()`. Dead code from abandoned features was still present. Several modules duplicated constants.
 
-**What was built — one task at a time:**
+**What was built - one task at a time:**
 
-1. **Seen-jobs TTL** — added a 90-day expiry rule to `run_cache_cleanup()` in `tracker.py`. Previously, seen job IDs accumulated indefinitely with no cleanup.
+1. **Seen-jobs TTL** - added a 90-day expiry rule to `run_cache_cleanup()` in `tracker.py`. Previously, seen job IDs accumulated indefinitely with no cleanup.
 
-2. **Career page cache schema fix** — `career_page_cache` table was storing a boolean (result found/not found). Redesigned to store the URL string directly (`url TEXT`), enabling the email card to render the actual link without a second lookup. Migration handles old schema on first run.
+2. **Career page cache schema fix** - `career_page_cache` table was storing a boolean (result found/not found). Redesigned to store the URL string directly (`url TEXT`), enabling the email card to render the actual link without a second lookup. Migration handles old schema on first run.
 
-3. **Consolidated `_HEADERS`** — HTTP headers were duplicated in `ghost_detector.py`, `fetcher.py`, and `parser.py`. Extracted into `pathfinder/src/_http.py` and imported from there.
+3. **Consolidated `_HEADERS`** - HTTP headers were duplicated in `ghost_detector.py`, `fetcher.py`, and `parser.py`. Extracted into `pathfinder/src/_http.py` and imported from there.
 
-4. **Config naming split removed** — `profile_loader.py` was translating `config.yaml`'s `search:` key into `scout` and `discovery` keys internally. `scout.py` read from these translated keys. Removed the translator entirely; everything now reads `search` directly. No more internal/external naming mismatch.
+4. **Config naming split removed** - `profile_loader.py` was translating `config.yaml`'s `search:` key into `scout` and `discovery` keys internally. `scout.py` read from these translated keys. Removed the translator entirely; everything now reads `search` directly. No more internal/external naming mismatch.
 
-5. **Logging strategy unified** — `pathfinder.py` used `print()` exclusively. Library modules used `logger.*()`. Added `logging.basicConfig` to `pathfinder.py`, added a module-level `logger`, and converted all operational status prints to `logger.info/warning/error`. `print_digest()` kept as `print()` since it's intentional formatted terminal output.
+5. **Logging strategy unified** - `pathfinder.py` used `print()` exclusively. Library modules used `logger.*()`. Added `logging.basicConfig` to `pathfinder.py`, added a module-level `logger`, and converted all operational status prints to `logger.info/warning/error`. `print_digest()` kept as `print()` since it's intentional formatted terminal output.
 
-6. **Dead code deleted** — `fetcher.py` and `parser.py` were not imported anywhere. `format_scout_message()` in `scout.py` was not called anywhere. All deleted.
+6. **Dead code deleted** - `fetcher.py` and `parser.py` were not imported anywhere. `format_scout_message()` in `scout.py` was not called anywhere. All deleted.
 
-7. **`pathfinder.py` split** — 920-line monolith split into four files:
-   - `pathfinder/src/scorer.py` — `load_config`, `build_scoring_prompt`, `score_job`, `score_all`
-   - `pathfinder/src/digest.py` — `build_html`, `build_no_results_email`, `send_email`, `print_digest`
-   - `pathfinder/src/salesforce.py` — `push_to_salesforce`
-   - `pathfinder.py` — `main()` only (~150 lines)
+7. **`pathfinder.py` split** - 920-line monolith split into four files:
+   - `pathfinder/src/scorer.py` - `load_config`, `build_scoring_prompt`, `score_job`, `score_all`
+   - `pathfinder/src/digest.py` - `build_html`, `build_no_results_email`, `send_email`, `print_digest`
+   - `pathfinder/src/salesforce.py` - `push_to_salesforce`
+   - `pathfinder.py` - `main()` only (~150 lines)
 
 **Key insight:** Each of these tasks was done and tested one at a time before moving to the next. The correct order mattered: config naming had to be fixed before the split, or the split would have locked in the wrong key names. Logging had to be unified before the split, or the new modules would have needed their own logging setup. Dead code had to be deleted before the split, or it would have been accidentally carried into the new files.
 
@@ -374,23 +374,23 @@ The hypothesis category and signal are stored on the job object and rendered as 
 
 **The problem:** The public repo had several friction points for new users and the digest output had accumulated quality debt: the hypothesis was a single blended sentence that wasn't actionable, NO results were invisible (no way to audit scoring), the ghost tracker's "Low Risk" badge signalled caution when it should signal confidence, and the README and build guide hadn't kept pace with what the tool actually did.
 
-**What was built — by commit:**
+**What was built - by commit:**
 
-`325edce` **Ghost tracker documentation in README** — Added a sentence to the intro paragraph explaining the repost signal mechanism (company + title + date stored per run, earlier date = repost). Added a `### How the ghost tracker works` subsection in the Ghost detection episode covering the `seen_jobs` vs `job_cache` distinction, the 10-entry cap, and the 90-day company inactivity expiry. Clarified that a fresh install has no history and meaningful signal arrives after 3–4 weeks.
+`325edce` **Ghost tracker documentation in README** - Added a sentence to the intro paragraph explaining the repost signal mechanism (company + title + date stored per run, earlier date = repost). Added a `### How the ghost tracker works` subsection in the Ghost detection episode covering the `seen_jobs` vs `job_cache` distinction, the 10-entry cap, and the 90-day company inactivity expiry. Clarified that a fresh install has no history and meaningful signal arrives after 3–4 weeks.
 
-`ad42c5f` **Config flow fix for public forks** — Removed `config.yaml` from `.gitignore` so users with private forks can commit their config directly. Updated `daily.yml` to remove the `else cp config.example.yaml config.yaml` fallback — the workflow now writes the `CONFIG` secret if present, otherwise leaves the checked-out `config.yaml` untouched. Either path works; the workflow handles both without intervention. Updated README Episode 4 to reflect that committing `config.yaml` is correct for private forks.
+`ad42c5f` **Config flow fix for public forks** - Removed `config.yaml` from `.gitignore` so users with private forks can commit their config directly. Updated `daily.yml` to remove the `else cp config.example.yaml config.yaml` fallback - the workflow now writes the `CONFIG` secret if present, otherwise leaves the checked-out `config.yaml` untouched. Either path works; the workflow handles both without intervention. Updated README Episode 4 to reflect that committing `config.yaml` is correct for private forks.
 
-`9a80dc1` / `fd783e2` **Git commands clarification in README** — Replaced the terse git command table with a plain-language explanation of what `git add .`, `git commit`, and `git push` each do and why all three are required. Added the three-command sequence to the "Adjusting over time" section. Fixed a missing dash in the `git push` line that slipped through.
+`9a80dc1` / `fd783e2` **Git commands clarification in README** - Replaced the terse git command table with a plain-language explanation of what `git add .`, `git commit`, and `git push` each do and why all three are required. Added the three-command sequence to the "Adjusting over time" section. Fixed a missing dash in the `git push` line that slipped through.
 
-`93a9912` **Scoring output refinement** — Expanded `REASON` from one sentence to two: sentence 1 names the key qualifier or disqualifier, sentence 2 explains specifically how it aligns with or conflicts with the candidate's background. Cut `HYPOTHESIS_SIGNAL` from two sentences to one to prevent the hypothesis from dominating the card. Raised `max_tokens` from 350 to 400.
+`93a9912` **Scoring output refinement** - Expanded `REASON` from one sentence to two: sentence 1 names the key qualifier or disqualifier, sentence 2 explains specifically how it aligns with or conflicts with the candidate's background. Cut `HYPOTHESIS_SIGNAL` from two sentences to one to prevent the hypothesis from dominating the card. Raised `max_tokens` from 350 to 400.
 
-`d8e48a9` **NO results added to email digest** — Every job scored NO now appears in a `SCORED NO (n)` section at the bottom of the digest. Each entry shows title · company — disqualify reason on one line with a "View posting" link below. Rationale: scoring transparency. If the disqualify criteria are miscalibrated, the NO section surfaces it immediately. Three NO sample jobs added to `SAMPLE_JOBS` so `--preview` renders the section.
+`d8e48a9` **NO results added to email digest** - Every job scored NO now appears in a `SCORED NO (n)` section at the bottom of the digest. Each entry shows title · company - disqualify reason on one line with a "View posting" link below. Rationale: scoring transparency. If the disqualify criteria are miscalibrated, the NO section surfaces it immediately. Three NO sample jobs added to `SAMPLE_JOBS` so `--preview` renders the section.
 
-`a0101e7` / `f16a38d` **Ghost signal appended to hypothesis** — After ghost detection runs, if the result is `Unverified` or `Ghost Likely`, a plain-text note is appended to the hypothesis signal: "Repost signal detected - verify this role is still open before applying" or "Strong repost history - this role may not be actively filling." Ghost note is stored as `job["ghost_note"]` and rendered separately from the LLM output. Sample jobs updated so `--preview` reflects the ghost note on flagged cards.
+`a0101e7` / `f16a38d` **Ghost signal appended to hypothesis** - After ghost detection runs, if the result is `Unverified` or `Ghost Likely`, a plain-text note is appended to the hypothesis signal: "Repost signal detected - verify this role is still open before applying" or "Strong repost history - this role may not be actively filling." Ghost note is stored as `job["ghost_note"]` and rendered separately from the LLM output. Sample jobs updated so `--preview` reflects the ghost note on flagged cards.
 
-`d41efcd` **Low Risk badge recoloured green** — `Low Risk` (posting 60+ days old, no repost history) was rendering amber, implying caution. Reframed: no repost history on an old posting is a positive signal — the role has been consistently listed without recycling. Badge changed to green (`#166534` on `#DCFCE7`). README badge table updated to match.
+`d41efcd` **Low Risk badge recoloured green** - `Low Risk` (posting 60+ days old, no repost history) was rendering amber, implying caution. Reframed: no repost history on an old posting is a positive signal - the role has been consistently listed without recycling. Badge changed to green (`#166534` on `#DCFCE7`). README badge table updated to match.
 
-`d4417f4` **Hypothesis split into two labelled signals** — The single `HYPOTHESIS_SIGNAL` field was replaced with two fields: `HYPOTHESIS_WHY` (why the company is hiring right now) and `HYPOTHESIS_VALUE` (what specific value the candidate brings to fill that gap). The prompt now instructs the LLM to produce both independently. The email card renders them as labelled lines: **Why they're hiring:** and **What you bring:**. The ghost note appends as a third muted italic line when present. All downstream consumers updated: `scorer.py` (prompt + parsing + return tuple), `digest.py` (card template + terminal output), `salesforce.py` (Hiring_Hypothesis__c field), `pathfinder.py` (sample data + ghost note logic). Preview SVG updated to reflect the new card layout across all three sections (QUALIFY, WORTH A LOOK, SCORED NO).
+`d4417f4` **Hypothesis split into two labelled signals** - The single `HYPOTHESIS_SIGNAL` field was replaced with two fields: `HYPOTHESIS_WHY` (why the company is hiring right now) and `HYPOTHESIS_VALUE` (what specific value the candidate brings to fill that gap). The prompt now instructs the LLM to produce both independently. The email card renders them as labelled lines: **Why they're hiring:** and **What you bring:**. The ghost note appends as a third muted italic line when present. All downstream consumers updated: `scorer.py` (prompt + parsing + return tuple), `digest.py` (card template + terminal output), `salesforce.py` (Hiring_Hypothesis__c field), `pathfinder.py` (sample data + ghost note logic). Preview SVG updated to reflect the new card layout across all three sections (QUALIFY, WORTH A LOOK, SCORED NO).
 
 **Key insight:** The hypothesis split was the highest-leverage change in this stage. Knowing why a company is hiring tells you how to frame an application. Knowing what value you specifically bring tells you what to lead with. A single blended sentence collapsed those two signals into one that was harder to act on. Separating them makes the digest genuinely useful as interview prep, not just as a filter.
 
@@ -400,15 +400,15 @@ The hypothesis category and signal are stored on the job object and rendered as 
 
 On a daily schedule at 6am PST:
 
-1. **Reply parse** — connects to Gmail via IMAP, reads any unread Pathfinder reply emails, extracts ghost detection corrections, and writes overrides to the companies table
-2. **Cache cleanup** — expires company records inactive for 90 days, trims each company to 10 repost-history entries, removes career page cache entries older than 90 days
-3. **Scout** — searches LinkedIn for Salesforce consulting role titles across Canada; deduplicates across sources and skips jobs already seen in prior runs (persisted via Actions cache)
-4. **AI filter** — drops obvious title mismatches in batches before scoring
-5. **Score** — each job evaluated against the candidate profile: YES / MAYBE / NO with a two-sentence reason (key signal + why it aligns or conflicts with the candidate's background)
-6. **Hypothesis** — YES and MAYBE jobs get a forced-choice hiring category (Backfill / Capacity / New capability / Recovery / Strategic bet / Unclear) with two labelled signals: why the company is hiring and what specific value the candidate brings
-7. **Ghost detection** — each YES and MAYBE job checked against two signals (posting age, repost history); result rendered as a colour-coded badge (green = low risk, orange = unverified, red = ghost likely). Ghost note appended to hypothesis when flagged. A separate careers page probe adds a direct link or a red warning to each card.
-8. **Email** — Outlook-compatible HTML digest sent with funnel metrics, scored cards with reason, hypothesis (why/value + ghost note), and ghost badge; NO results listed compactly at the bottom with disqualify reason and posting link for human review
-9. **Salesforce** — YES and MAYBE jobs pushed as Opportunities, deduped by URL, with stage, source, work type, and ghost detection state mapped to custom fields
+1. **Reply parse** - connects to Gmail via IMAP, reads any unread Pathfinder reply emails, extracts ghost detection corrections, and writes overrides to the companies table
+2. **Cache cleanup** - expires company records inactive for 90 days, trims each company to 10 repost-history entries, removes career page cache entries older than 90 days
+3. **Scout** - searches LinkedIn for Salesforce consulting role titles across Canada; deduplicates across sources and skips jobs already seen in prior runs (persisted via Actions cache)
+4. **AI filter** - drops obvious title mismatches in batches before scoring
+5. **Score** - each job evaluated against the candidate profile: YES / MAYBE / NO with a two-sentence reason (key signal + why it aligns or conflicts with the candidate's background)
+6. **Hypothesis** - YES and MAYBE jobs get a forced-choice hiring category (Backfill / Capacity / New capability / Recovery / Strategic bet / Unclear) with two labelled signals: why the company is hiring and what specific value the candidate brings
+7. **Ghost detection** - each YES and MAYBE job checked against two signals (posting age, repost history); result rendered as a colour-coded badge (green = low risk, orange = unverified, red = ghost likely). Ghost note appended to hypothesis when flagged. A separate careers page probe adds a direct link or a red warning to each card.
+8. **Email** - Outlook-compatible HTML digest sent with funnel metrics, scored cards with reason, hypothesis (why/value + ghost note), and ghost badge; NO results listed compactly at the bottom with disqualify reason and posting link for human review
+9. **Salesforce** - YES and MAYBE jobs pushed as Opportunities, deduped by URL, with stage, source, work type, and ghost detection state mapped to custom fields
 
 **Typical run:** ~300 scraped → ~120 AI filtered → 15-20 scored → 2-5 relevant. Token usage ~50-55k/day against a 100k daily limit on Groq's free tier.
 
