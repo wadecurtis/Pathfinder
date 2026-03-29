@@ -24,13 +24,13 @@ Depends on where you're starting from.
 
 **If you've never heard of VS Code or a terminal: 2 to 3 hours.**
 
-Most of that time is not the installs -- it's Episode 4. Writing your `highlights` and scoring criteria is the hardest part for everyone. The AI prompts in Episode 3.5 help, but plan for 45 minutes just on the config. Add another 30-45 minutes for installing VS Code, Python, and Git if you're starting from zero, plus 20-30 minutes to create accounts and get your API keys. Local test and going live add another 30 minutes once everything is in place.
+The installs are not the slow part. Episode 4 is. Writing your highlights and scoring criteria is the hardest step for everyone. Plan 45 minutes just on the config. Add 30-45 minutes to install VS Code, Python, and Git if you're starting from zero, plus 20-30 minutes to create accounts and collect your API keys. Local testing and going live add another 30 minutes once everything is in place.
 
 **If you're comfortable with a terminal and have used Python or Git before: 1 to 1.5 hours.**
 
-Accounts and API keys take 10-15 minutes. Fork, clone, and setup take another 10. The config -- especially writing good highlights -- still takes 20-30 minutes even if you know what you're doing. Local test and going live add 20-30 minutes.
+Accounts and API keys: 10-15 minutes. Fork, clone, and setup: another 10. The config, especially writing good highlights, still takes 20-30 minutes regardless of experience level. Local test and going live: 20-30 minutes.
 
-**The config is the bottleneck for everyone.** The installs are mechanical. Getting your highlights specific and outcome-focused enough to produce accurate scores is where the real time goes. Use the AI prompts in the "Before Episode 4" section. They cut the time in half.
+**The config is the bottleneck for everyone.** The installs are mechanical. Getting your highlights specific and outcome-focused enough to produce accurate scores is where the real time goes. Use the AI prompts in the Before Episode 4 section. They cut the time in half.
 
 ---
 
