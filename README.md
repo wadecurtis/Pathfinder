@@ -303,7 +303,7 @@ First, copy the example config to create your own:
 cp config.example.yaml config.yaml
 ```
 
-`config.yaml` is gitignored - it will never be committed or pushed to GitHub. Your personal data stays on your machine.
+`config.yaml` will be committed to your private fork — that's how GitHub Actions reads it. Your fork is private, so this is safe.
 
 ### pathfinder/.env
 
@@ -513,8 +513,6 @@ SF_USERNAME=you@yourorg.com
 SF_PASSWORD=yourpassword
 SF_SECURITY_TOKEN=yourtoken
 ```
-
-> If `CONFIG` is not set, the workflow falls back to `config.example.yaml`. The pipeline will run with placeholder values - useful for testing the workflow itself before your config is ready.
 
 > **How seen-jobs persist between runs:** Pathfinder uses GitHub's built-in cache system (`actions/cache`) to save the database between daily runs. This works automatically with no extra token or configuration - the default `GITHUB_TOKEN` provided by every Actions run is sufficient.
 

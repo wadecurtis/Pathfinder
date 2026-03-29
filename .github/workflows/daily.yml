@@ -34,8 +34,6 @@ jobs:
         run: |
           if [ -n "$CONFIG" ]; then
             echo "$CONFIG" > config.yaml
-          else
-            cp config.example.yaml config.yaml
           fi
         env:
           CONFIG: ${{ secrets.CONFIG }}

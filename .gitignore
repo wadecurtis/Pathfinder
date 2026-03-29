@@ -1,5 +1,4 @@
 pathfinder/.env
-config.yaml
 pathfinder/data/
 pathfinder/config/*.backup
 *.db
