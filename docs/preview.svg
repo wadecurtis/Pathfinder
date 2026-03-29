@@ -30,11 +30,10 @@
   <text x="44" y="139" font-size="15" fill="#111111" font-style="italic">directly aligns with the candidate's certifications and delivery background.</text>
 
   <!-- Hypothesis block -->
-  <rect x="44" y="153" width="538" height="78" rx="6" fill="#F0F9F5"/>
-  <rect x="44" y="153" width="3" height="78" fill="#1D9E75"/>
+  <rect x="44" y="153" width="538" height="58" rx="6" fill="#F0F9F5"/>
+  <rect x="44" y="153" width="3" height="58" fill="#1D9E75"/>
   <text x="54" y="171" font-size="11" font-weight="700" fill="#1D9E75" letter-spacing="1.2">HYPOTHESIS · CAPACITY</text>
-  <text x="54" y="190" font-size="14" fill="#0D2F4F">Three open roles in the same month signals a capacity gap, not a backfill.</text>
-  <text x="54" y="209" font-size="14" fill="#64748B" font-style="italic">Strong repost history - this role may not be actively filling.</text>
+  <text x="54" y="196" font-size="14" fill="#0D2F4F">Three open roles in the same month signals a capacity gap, not a backfill.</text>
 
   <!-- Button -->
   <rect x="44" y="245" width="96" height="28" rx="7" fill="#1D9E75"/>
