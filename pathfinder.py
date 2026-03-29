@@ -39,48 +39,53 @@ logger = logging.getLogger(__name__)
 SAMPLE_JOBS = [
     {"title": "Salesforce Implementation Consultant", "company": "Acme Consulting",
      "location": "Remote - Canada", "url": "https://linkedin.com/jobs/view/123",
-     "score": "YES", "reason": "Full lifecycle Sales Cloud delivery, SMB focus, remote-friendly - strong match.",
+     "score": "YES", "reason": "Full lifecycle Sales Cloud delivery and SMB focus match exactly - remote-friendly seals it.",
      "hypothesis_category": "New capability",
-     "hypothesis_signal": "Role is titled 'founding consultant' and reports directly to the VP of Delivery - this seat is building the practice, not backfilling it. Candidate's self-implementation background is the exact proof point.",
+     "hypothesis_why": "Role is titled founding consultant reporting to the VP of Delivery - they are building the practice from scratch, not replacing someone.",
+     "hypothesis_value": "Candidate's self-built Sales Cloud org and end-to-end delivery record is the exact proof point a practice-building hire requires.",
      "ghost_detection": "clean", "careers_page_url": "https://acmeconsulting.com/careers"},
     {"title": "Salesforce Solutions Consultant", "company": "CloudCo",
      "location": "Vancouver, BC (Hybrid)", "url": "https://linkedin.com/jobs/view/456",
-     "score": "YES", "reason": "Agentforce implementation valued, declarative-only, mid-market clients.",
+     "score": "YES", "reason": "Agentforce implementation valued and role is declarative-only with mid-market clients - directly matches certifications and delivery background.",
      "hypothesis_category": "Capacity",
-     "hypothesis_signal": "Three open roles posted in the same month suggests a pipeline problem, not a single gap. Candidate adds immediate delivery capacity without a ramp period. Strong repost history - this role may not be actively filling.",
-     "ghost_detection": "Ghost Likely"},
+     "hypothesis_why": "Three open roles posted in the same month signals the team is under-resourced against an existing mandate, not filling a single gap.",
+     "hypothesis_value": "Candidate adds immediate delivery capacity with no ramp period - certifications and live org experience translate directly.",
+     "ghost_detection": "Ghost Likely", "ghost_note": "Strong repost history - this role may not be actively filling."},
     {"title": "CRM Implementation Consultant", "company": "Ridge Partners",
      "location": "Remote - Canada", "url": "https://linkedin.com/jobs/view/789",
-     "score": "MAYBE", "reason": "Platform not specified - could be Salesforce, could be HubSpot.",
+     "score": "MAYBE", "reason": "Platform unspecified throughout - could be Salesforce, could be another CRM entirely.",
      "hypothesis_category": "Unclear",
-     "hypothesis_signal": "Posting uses generic CRM language throughout with no platform named - either intentionally platform-agnostic or written by someone outside the team. Worth a quick look at their tech stack before applying. Repost signal detected - verify this role is still open before applying.",
-     "ghost_detection": "Unverified"},
+     "hypothesis_why": "Generic CRM language with no platform named - either intentionally agnostic or written without technical input.",
+     "hypothesis_value": "If the platform confirms Salesforce, candidate's depth is a strong fit - worth a quick stack check before applying.",
+     "ghost_detection": "Ghost Likely", "ghost_note": "Strong repost history - this role may not be actively filling."},
     {"title": "Salesforce Admin", "company": "BuildCorp",
      "location": "Remote - Canada", "url": "https://linkedin.com/jobs/view/101",
-     "score": "MAYBE", "reason": "Admin-level scope, but admin + consulting hybrid is common at this size.",
+     "score": "MAYBE", "reason": "Admin-level scope, but admin and consulting hybrid is common at this company size.",
      "hypothesis_category": "Backfill",
-     "hypothesis_signal": "Single headcount, no growth language - this is a backfill. Low churn risk for candidate.",
+     "hypothesis_why": "Single headcount, no growth language - someone left and this seat needs to be filled.",
+     "hypothesis_value": "Candidate's delivery background exceeds the scope, which creates leverage to shape the role during the process.",
      "ghost_detection": "Low Risk"},
     {"title": "Salesforce Functional Consultant", "company": "NorthPeak Group",
      "location": "Remote - Canada", "url": "https://linkedin.com/jobs/view/202",
      "score": "MAYBE", "reason": "Role scope aligns but platform stack is ambiguous - follow up required.",
      "hypothesis_category": "Unclear",
-     "hypothesis_signal": "No tech stack named and the role is listed under both IT and Sales divisions - likely an internal headcount debate still in progress.",
+     "hypothesis_why": "Role listed under both IT and Sales divisions with no tech stack named - likely an internal scope debate still in progress.",
+     "hypothesis_value": "Candidate's cross-functional delivery experience positions them well if the role resolves toward a consulting track.",
      "ghost_detection": "clean"},
     {"title": "Salesforce Developer", "company": "DevShop Inc",
      "location": "Remote - Canada", "url": "https://linkedin.com/jobs/view/303",
      "score": "NO", "reason": "Requires Apex and LWC development - hard disqualifier.",
-     "hypothesis_category": "", "hypothesis_signal": "",
+     "hypothesis_category": "", "hypothesis_why": "", "hypothesis_value": "",
      "ghost_detection": "clean", "careers_page_url": None},
     {"title": "Salesforce CPQ Consultant", "company": "PriceCo",
      "location": "Toronto, ON (On-site)", "url": "https://linkedin.com/jobs/view/404",
      "score": "NO", "reason": "On-site Toronto only with no remote option - location disqualifier.",
-     "hypothesis_category": "", "hypothesis_signal": "",
+     "hypothesis_category": "", "hypothesis_why": "", "hypothesis_value": "",
      "ghost_detection": "clean", "careers_page_url": None},
     {"title": "Senior Salesforce Architect", "company": "GlobalSI",
      "location": "Remote - Canada", "url": "https://linkedin.com/jobs/view/505",
      "score": "NO", "reason": "Employer is a global SI - disqualified regardless of role fit.",
-     "hypothesis_category": "", "hypothesis_signal": "",
+     "hypothesis_category": "", "hypothesis_why": "", "hypothesis_value": "",
      "ghost_detection": "clean", "careers_page_url": None},
 ]
 SAMPLE_METRICS = {
@@ -177,8 +182,8 @@ def main():
         job["ghost_detection"] = result
         if result != "clean":
             logger.info(f"  [{result}] {job['company']}: {job['title']}")
-        if result in _GHOST_NOTES and job.get("hypothesis_signal"):
-            job["hypothesis_signal"] = job["hypothesis_signal"] + " " + _GHOST_NOTES[result]
+        if result in _GHOST_NOTES:
+            job["ghost_note"] = _GHOST_NOTES[result]
         careers_url = find_careers_page_url(job.get("company", ""), job.get("url", ""))
         job["careers_page_url"] = careers_url
         if careers_url:
@@ -187,6 +192,7 @@ def main():
     for job in scored:
         job.setdefault("ghost_detection", "clean")
         job.setdefault("careers_page_url", None)
+        job.setdefault("ghost_note", None)
 
     if not relevant:
         logger.info("[Pathfinder] Nothing relevant this run.")

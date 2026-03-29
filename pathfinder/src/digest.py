@@ -209,7 +209,14 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
             badge_html = ""
 
         hypothesis_html = ""
-        if job.get("hypothesis_category") and job.get("hypothesis_signal"):
+        if job.get("hypothesis_category") and job.get("hypothesis_why"):
+            ghost_note_html = ""
+            if job.get("ghost_note"):
+                ghost_note_html = (
+                    f'<p style="margin:6px 0 0;font-size:14px;color:{MUTED};'
+                    f'font-style:italic;line-height:1.5;" class="t-muted">'
+                    f'{job["ghost_note"]}</p>'
+                )
             hypothesis_html = f"""
           <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
                  style="margin:0 0 16px;">
@@ -217,11 +224,14 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
               <td class="bg-hypothesis"
                   style="padding:10px 12px;background-color:#F0F9F5;border-radius:6px;
                          border-left:3px solid {TEAL};">
-                <p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;
+                <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;
                            letter-spacing:1.2px;color:{TEAL};font-weight:700;"
                    class="t-teal">Hypothesis &middot; {job['hypothesis_category']}</p>
+                <p style="margin:0 0 4px;font-size:15px;color:{TEXT};line-height:1.5;"
+                   class="t-primary"><strong>Why they&rsquo;re hiring:</strong> {job['hypothesis_why'].replace('—', '-')}</p>
                 <p style="margin:0;font-size:15px;color:{TEXT};line-height:1.5;"
-                   class="t-primary">{job['hypothesis_signal'].replace('—', '-')}</p>
+                   class="t-primary"><strong>What you bring:</strong> {job['hypothesis_value'].replace('—', '-')}</p>
+                {ghost_note_html}
               </td>
             </tr>
           </table>"""
@@ -447,7 +457,7 @@ def print_digest(jobs: list[dict], metrics: dict):
             print(f"  {j['location']}")
             print(f"  {j['reason']}")
             if j.get("hypothesis_category"):
-                print(f"  [{j['hypothesis_category']}] {j['hypothesis_signal']}")
+                print(f"  [{j['hypothesis_category']}] Why: {j.get('hypothesis_why','')} / Value: {j.get('hypothesis_value','')}")
             print(f"  {j['url']}\n")
 
     if maybe_jobs:

@@ -149,8 +149,10 @@ HYPOTHESIS_CATEGORY: pick exactly one using the definitions below — choose the
   Unclear        — Posting lacks enough signal to distinguish between categories. Use only when none
                    of the above fit — not as a default when evidence is thin.
 
-HYPOTHESIS_SIGNAL: One sentence. Quote or closely paraphrase the specific language from the posting
-that supports your category choice.
+HYPOTHESIS_WHY: One sentence. Based on signals in the posting, state why this company is hiring for
+this role right now.
+HYPOTHESIS_VALUE: One sentence. Based on the candidate's background above, state the specific value
+they bring to fill this gap.
 
 Do not use em dashes (-) anywhere in your response. Use a plain hyphen (-) instead.
 """
@@ -160,8 +162,8 @@ CONFIG = load_config()
 SCORING_PROMPT_TEMPLATE = build_scoring_prompt(CONFIG)
 
 
-def score_job(job: JobListing) -> tuple[str, str, str, str]:
-    """Score a single job. Returns (score, reason, hypothesis_category, hypothesis_signal)."""
+def score_job(job: JobListing) -> tuple[str, str, str, str, str]:
+    """Score a single job. Returns (score, reason, hypothesis_category, hypothesis_why, hypothesis_value)."""
     prompt = SCORING_PROMPT_TEMPLATE.format(
         title=job.title,
         company=job.company,
@@ -169,11 +171,12 @@ def score_job(job: JobListing) -> tuple[str, str, str, str]:
         description=(job.description or "")[:3000],
     )
     try:
-        response = get_llm_response(prompt, max_tokens=350)
+        response = get_llm_response(prompt, max_tokens=400)
         score        = "NO"
         reason       = ""
         hyp_category = ""
-        hyp_signal   = ""
+        hyp_why      = ""
+        hyp_value    = ""
         for line in response.strip().splitlines():
             if line.startswith("SCORE:"):
                 score = line.replace("SCORE:", "").strip()
@@ -181,13 +184,16 @@ def score_job(job: JobListing) -> tuple[str, str, str, str]:
                 reason = line.replace("REASON:", "").strip()
             elif line.startswith("HYPOTHESIS_CATEGORY:"):
                 hyp_category = line.replace("HYPOTHESIS_CATEGORY:", "").strip()
-            elif line.startswith("HYPOTHESIS_SIGNAL:"):
-                hyp_signal = line.replace("HYPOTHESIS_SIGNAL:", "").strip()
-        reason     = reason.replace("—", "-")
-        hyp_signal = hyp_signal.replace("—", "-")
-        return score, reason, hyp_category, hyp_signal
+            elif line.startswith("HYPOTHESIS_WHY:"):
+                hyp_why = line.replace("HYPOTHESIS_WHY:", "").strip()
+            elif line.startswith("HYPOTHESIS_VALUE:"):
+                hyp_value = line.replace("HYPOTHESIS_VALUE:", "").strip()
+        reason    = reason.replace("—", "-")
+        hyp_why   = hyp_why.replace("—", "-")
+        hyp_value = hyp_value.replace("—", "-")
+        return score, reason, hyp_category, hyp_why, hyp_value
     except Exception as e:
-        return "MAYBE", f"Could not score — review manually ({e})", "", ""
+        return "MAYBE", f"Could not score — review manually ({e})", "", "", ""
 
 
 def score_all(jobs: list[JobListing]) -> list[dict]:
@@ -195,13 +201,13 @@ def score_all(jobs: list[JobListing]) -> list[dict]:
     results = []
     logger.info(f"[Score] Scoring {len(jobs)} listings...")
     for job in jobs:
-        score, reason, hyp_category, hyp_signal = score_job(job)
+        score, reason, hyp_category, hyp_why, hyp_value = score_job(job)
         icon = "YES" if score == "YES" else ("~~" if score == "MAYBE" else "NO")
         desc_len = len(job.description or "")
         logger.info(f"  [{icon}] {job.company}: {job.title} (desc: {desc_len} chars)")
         logger.info(f"       {reason}")
         if hyp_category:
-            logger.info(f"       [{hyp_category}] {hyp_signal}")
+            logger.info(f"       [{hyp_category}] {hyp_why} / {hyp_value}")
         results.append({
             "title":               job.title,
             "company":             job.company,
@@ -212,6 +218,7 @@ def score_all(jobs: list[JobListing]) -> list[dict]:
             "score":               score,
             "reason":              reason,
             "hypothesis_category": hyp_category,
-            "hypothesis_signal":   hyp_signal,
+            "hypothesis_why":      hyp_why,
+            "hypothesis_value":    hyp_value,
         })
     return results

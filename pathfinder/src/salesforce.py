@@ -73,8 +73,12 @@ def push_to_salesforce(jobs: list[dict]):
 
         try:
             description = job["reason"]
-            if job.get("hypothesis_category") and job.get("hypothesis_signal"):
-                description += f"\n\nHypothesis ({job['hypothesis_category']}): {job['hypothesis_signal']}"
+            if job.get("hypothesis_category") and job.get("hypothesis_why"):
+                description += (
+                    f"\n\nHypothesis ({job['hypothesis_category']}): "
+                    f"Why they're hiring: {job['hypothesis_why']} "
+                    f"What you bring: {job['hypothesis_value']}"
+                )
 
             opp_data = {
                 "Name":               f"{job['title']} - {job['company']}",
