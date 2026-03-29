@@ -21,6 +21,16 @@ jobs:
           restore-keys: |
             tracker-db-
 
+      - name: Apply personal config
+        run: |
+          if [ -n "$CONFIG_YAML" ]; then
+            echo "$CONFIG_YAML" > config.yaml
+          else
+            cp config.example.yaml config.yaml
+          fi
+        env:
+          CONFIG_YAML: ${{ secrets.CONFIG_YAML }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

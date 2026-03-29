@@ -288,6 +288,16 @@ Use the feedback to tighten your criteria before running Pathfinder live.
 
 Two files to fill in. Open them side by side in VS Code.
 
+### config.yaml
+
+First, copy the example config to create your own:
+
+```
+cp config.example.yaml config.yaml
+```
+
+`config.yaml` is gitignored — it will never be committed or pushed to GitHub. Your personal data stays on your machine.
+
 ### pathfinder/.env
 
 Open `pathfinder/.env`. Replace the placeholder values with the keys you got in Episode 1:
@@ -304,9 +314,9 @@ DIGEST_RECIPIENT=you@gmail.com
 > `.env` is never uploaded to GitHub. It stays on your computer only.
 > **Important:** The file must be at `pathfinder/.env`, not the repo root. Pathfinder only reads from `pathfinder/.env`.
 
-### config.yaml
+### config.yaml (continued)
 
-Open `config.yaml` at the root of the folder. It comes pre-filled with a real example. Replace each section with your own information.
+Open `config.yaml` at the root of the folder. Replace each section with your own information.
 
 ---
 
@@ -423,7 +433,7 @@ Takes 1-2 minutes. The terminal shows each score and reason. If the right roles 
 ### Troubleshooting
 
 **`config.yaml not found`**
-Run the command from the `Pathfinder` folder, not from inside `pathfinder/`.
+You haven't copied the example yet. Run `cp config.example.yaml config.yaml` from the Pathfinder folder, then fill it in.
 
 **`GROQ_API_KEY not set`**
 Your `.env` file is missing or in the wrong place. It should be at `pathfinder/.env`.
@@ -460,7 +470,7 @@ This makes Pathfinder run every morning automatically. Your computer does not ne
 
 Go to your forked repo on GitHub, then Settings > Secrets and variables > Actions > New repository secret.
 
-Add these four:
+Add these five:
 
 | Name | Value |
 |---|---|
@@ -468,6 +478,11 @@ Add these four:
 | `GMAIL_SENDER` | `you@gmail.com` |
 | `GMAIL_APP_PASSWORD` | 16-character app password, no spaces |
 | `DIGEST_RECIPIENT` | Where to send the digest (can be same address) |
+| `CONFIG_YAML` | Your full `config.yaml` contents, pasted as-is |
+
+**Adding `CONFIG_YAML`:** Open your local `config.yaml`, select all, copy, paste into the secret value field. The workflow writes it to disk before each run. Your personal profile and scoring criteria never touch the repo.
+
+> If `CONFIG_YAML` is not set, the workflow falls back to `config.example.yaml`. The pipeline will run with placeholder values — useful for testing the workflow itself before your config is ready.
 
 > **How seen-jobs persist between runs:** Pathfinder uses GitHub's built-in cache system (`actions/cache`) to save the database between daily runs. This works automatically with no extra token or configuration — the default `GITHUB_TOKEN` provided by every Actions run is sufficient.
 
