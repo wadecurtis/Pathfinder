@@ -4,7 +4,15 @@ Job searching produces too many listings and no good way to evaluate them. Readi
 
 Pathfinder searches LinkedIn every morning, scores every posting against your specific background using AI, and emails you only the roles worth pursuing. Typically 2–5 results out of 300+ raw listings. It runs automatically on GitHub and costs nothing to operate.
 
-What makes it different: it scores the job against the candidate, not keywords against a resume. Every result includes a plain-language reason why it matched and a hypothesis on why the role is open — whether it's a backfill, a new capability hire, or a strategic bet. Ghost detection flags postings that show signs of not being actively filled. The longer it runs, the more history it builds on companies and roles, and the more useful that signal becomes.
+**What's in each digest:**
+- **AI scoring** — YES, MAYBE, or NO with a plain-language reason for every posting
+- **Hiring hypothesis** — why the role is open: backfill, new capability, recovery from a failed implementation, capacity growth, or strategic bet — with specific language from the posting to back it up
+- **Ghost detection** — a badge on any posting showing signs of not being actively filled, based on age and repost history
+- **Careers page link** — a direct link to the company's jobs page when one can be found, or a flagged warning when it can't
+- **Reply-to-correct** — reply to any digest email to correct a wrong ghost result; the override applies to future runs automatically
+- **Salesforce push** — YES and MAYBE results can be pushed directly into a Salesforce Career Pipeline object (optional)
+
+**Ghost detection gets better the longer Pathfinder runs.** Each daily run builds a history of companies and roles it has seen. After a few weeks, it recognizes when a company is re-posting the same role — a strong signal the position hasn't been filled. A fresh install has no history to draw on. Expect meaningful ghost signal after 3–4 weeks of daily runs.
 
 ![Sample output showing a YES card with hiring hypothesis and a filtered NO card](docs/preview.svg)
 
@@ -563,8 +571,7 @@ SF_SECURITY_TOKEN=yourtoken
 - `Ghost_Detection__c` is set to `Low Risk`, `Unverified`, or `Ghost Likely` when the ghost detector flags a role. It's left blank for `clean` results.
 - If credentials aren't set, Pathfinder skips the push silently.
 
-**Also add to GitHub Actions secrets** if you want the daily automated run to push to Salesforce:
-`SF_USERNAME`, `SF_PASSWORD`, `SF_SECURITY_TOKEN`
+These are included in your `pathfinder/.env` file. When you copy your `.env` contents into the `KEYS` GitHub secret, the Salesforce credentials are included automatically — no separate secrets needed.
 
 ---
 
@@ -581,7 +588,7 @@ Every YES and MAYBE job in the digest is checked against three signals before th
 
 Each QUALIFY and WORTH A LOOK card also includes one of two lines below the View Role button:
 - **Check Careers Page →** — a direct link to the company's careers or jobs page when one is found
-- **No careers page found — possible ghost.** — shown in red when no standard careers URL responds; treat this as a prompt to verify the role before applying
+- **No careers page found - possible ghost.** — shown in red when no standard careers URL responds; treat this as a prompt to verify the role before applying
 
 Ghost detection runs automatically. No configuration needed.
 

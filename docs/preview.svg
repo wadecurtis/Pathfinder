@@ -1,10 +1,10 @@
-<svg width="620" height="600" viewBox="0 0 620 600" xmlns="http://www.w3.org/2000/svg">
+<svg width="620" height="610" viewBox="0 0 620 610" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <style>text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }</style>
   </defs>
 
   <!-- Page background -->
-  <rect width="620" height="600" fill="#F0F4F8"/>
+  <rect width="620" height="610" fill="#F0F4F8"/>
 
   <!-- ─────────────────────────────────────── -->
   <!-- QUALIFY section                         -->
@@ -13,9 +13,9 @@
   <text x="20" y="25" font-size="11" font-weight="700" fill="#1D9E75" letter-spacing="1.5">QUALIFY (1)</text>
 
   <!-- Accent bar -->
-  <rect x="20" y="36" width="4" height="248" rx="2" fill="#1D9E75"/>
+  <rect x="20" y="36" width="4" height="258" rx="2" fill="#1D9E75"/>
   <!-- Card -->
-  <rect x="24" y="36" width="576" height="248" rx="4" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="24" y="36" width="576" height="258" rx="4" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
 
   <!-- Title -->
   <text x="44" y="71" font-size="17" font-weight="700" fill="#0D2F4F">Salesforce Solutions Consultant</text>
@@ -37,36 +37,45 @@
   <rect x="44" y="228" width="96" height="28" rx="7" fill="#1D9E75"/>
   <text x="92" y="246" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">View Role →</text>
 
+  <!-- Careers page link -->
+  <text x="44" y="272" font-size="14" font-weight="500" fill="#1D9E75" text-decoration="underline">Check Careers Page →</text>
 
   <!-- ─────────────────────────────────────── -->
   <!-- WORTH A LOOK section                    -->
   <!-- ─────────────────────────────────────── -->
 
-  <text x="20" y="310" font-size="11" font-weight="700" fill="#64748B" letter-spacing="1.5">WORTH A LOOK (1)</text>
+  <text x="20" y="320" font-size="11" font-weight="700" fill="#64748B" letter-spacing="1.5">WORTH A LOOK (1)</text>
 
   <!-- Accent bar -->
-  <rect x="20" y="322" width="4" height="248" rx="2" fill="#94A3B8"/>
+  <rect x="20" y="332" width="4" height="262" rx="2" fill="#94A3B8"/>
   <!-- Card -->
-  <rect x="24" y="322" width="576" height="248" rx="4" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="24" y="332" width="576" height="262" rx="4" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
 
   <!-- Title -->
-  <text x="44" y="357" font-size="17" font-weight="700" fill="#0D2F4F">CRM Implementation Consultant</text>
+  <text x="44" y="367" font-size="17" font-weight="700" fill="#0D2F4F">CRM Implementation Consultant</text>
+  <!-- Unverified badge -->
+  <rect x="497" y="352" width="84" height="21" rx="4" fill="#FFEDD5"/>
+  <text x="539" y="367" font-size="10" font-weight="700" fill="#9A3412" text-anchor="middle">Unverified</text>
+
   <!-- Company -->
-  <text x="44" y="376" font-size="15" font-weight="600" fill="#64748B">Ridge Partners</text>
+  <text x="44" y="386" font-size="15" font-weight="600" fill="#64748B">Ridge Partners</text>
   <!-- Location -->
-  <text x="44" y="394" font-size="13" fill="#64748B">Remote - Canada</text>
+  <text x="44" y="404" font-size="13" fill="#64748B">Remote - Canada</text>
   <!-- Reason -->
-  <text x="44" y="414" font-size="15" fill="#111111" font-style="italic">Platform not specified. Could be Salesforce, could be HubSpot.</text>
+  <text x="44" y="424" font-size="15" fill="#111111" font-style="italic">Platform not specified. Could be Salesforce, could be HubSpot.</text>
 
   <!-- Hypothesis block -->
-  <rect x="44" y="428" width="538" height="72" rx="6" fill="#F0F9F5"/>
-  <rect x="44" y="428" width="3" height="72" fill="#1D9E75"/>
-  <text x="54" y="446" font-size="11" font-weight="700" fill="#1D9E75" letter-spacing="1.2">HYPOTHESIS · UNCLEAR</text>
-  <text x="54" y="465" font-size="14" fill="#0D2F4F">Generic CRM language throughout with no platform named. Either</text>
-  <text x="54" y="484" font-size="14" fill="#0D2F4F">platform-agnostic or written by someone outside the team.</text>
+  <rect x="44" y="438" width="538" height="72" rx="6" fill="#F0F9F5"/>
+  <rect x="44" y="438" width="3" height="72" fill="#1D9E75"/>
+  <text x="54" y="456" font-size="11" font-weight="700" fill="#1D9E75" letter-spacing="1.2">HYPOTHESIS · UNCLEAR</text>
+  <text x="54" y="475" font-size="14" fill="#0D2F4F">Generic CRM language throughout with no platform named. Either</text>
+  <text x="54" y="494" font-size="14" fill="#0D2F4F">platform-agnostic or written by someone outside the team.</text>
 
   <!-- Button -->
-  <rect x="44" y="514" width="96" height="28" rx="7" fill="#64748B"/>
-  <text x="92" y="532" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">View Role →</text>
+  <rect x="44" y="524" width="96" height="28" rx="7" fill="#64748B"/>
+  <text x="92" y="542" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">View Role →</text>
+
+  <!-- No careers page warning -->
+  <text x="44" y="568" font-size="14" font-weight="500" fill="#DC2626">No careers page found - possible ghost.</text>
 
 </svg>
