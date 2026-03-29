@@ -18,6 +18,22 @@ Pathfinder searches LinkedIn every morning, scores every posting against your sp
 
 ---
 
+## How long does setup take?
+
+Depends on where you're starting from.
+
+**If you've never heard of VS Code or a terminal: 2 to 3 hours.**
+
+Most of that time is not the installs -- it's Episode 4. Writing your `highlights` and scoring criteria is the hardest part for everyone. The AI prompts in Episode 3.5 help, but plan for 45 minutes just on the config. Add another 30-45 minutes for installing VS Code, Python, and Git if you're starting from zero, plus 20-30 minutes to create accounts and get your API keys. Local test and going live add another 30 minutes once everything is in place.
+
+**If you're comfortable with a terminal and have used Python or Git before: 1 to 1.5 hours.**
+
+Accounts and API keys take 10-15 minutes. Fork, clone, and setup take another 10. The config -- especially writing good highlights -- still takes 20-30 minutes even if you know what you're doing. Local test and going live add 20-30 minutes.
+
+**The config is the bottleneck for everyone.** The installs are mechanical. Getting your highlights specific and outcome-focused enough to produce accurate scores is where the real time goes. Use the AI prompts in the "Before Episode 4" section. They cut the time in half.
+
+---
+
 ## Quick reference
 
 All commands you'll use. Details are in the episodes below.
@@ -81,10 +97,7 @@ Watch this episode before installing anything. You'll create the accounts you ne
 | Groq (AI scoring) | console.groq.com | Free |
 | Gmail (to send digest) | gmail.com | Free |
 
-**Time to complete setup:**
-- Tools already installed (Python, Git, VS Code): 30-45 minutes
-- Starting from scratch: 60-90 minutes
-- Optional Salesforce integration: add 30 minutes
+See **How long does setup take?** above the Quick Reference for realistic time estimates by experience level. Optional Salesforce integration adds roughly 30 minutes on top.
 
 ### Get your Groq API key
 
