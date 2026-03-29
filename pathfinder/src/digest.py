@@ -180,7 +180,7 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
 
     # ── Ghost badge colors ────────────────────────────────────────────────────
     GHOST_BADGE = {
-        "Low Risk":     ("#92400E", "#FEF3C7"),   # amber text on amber-50
+        "Low Risk":     ("#166534", "#DCFCE7"),   # green text on green-50 — old posting, no repost history
         "Unverified":   ("#9A3412", "#FFEDD5"),   # orange text on orange-50
         "Ghost Likely": ("#991B1B", "#FEE2E2"),   # red text on red-50
     }

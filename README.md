@@ -603,7 +603,7 @@ Every YES and MAYBE job in the digest is checked against three signals before th
 
 | Badge | Meaning |
 |---|---|
-| **Low Risk** (amber) | Posting is 60+ days old - weak signal only |
+| **Low Risk** (green) | Posting is 60+ days old with no repost history - low ghost risk |
 | **Unverified** (orange) | Same or similar role from this company seen in prior searches |
 | **Ghost Likely** (red) | Repost history combined with stale age |
 | *(no badge)* | Not enough signal either way |
