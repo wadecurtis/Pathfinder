@@ -168,11 +168,17 @@ def main():
 
     # Ghost detection + careers page discovery — run only on QUALIFY and NEUTRAL results
     logger.info(f"[Ghost] Running ghost detection on {len(relevant)} relevant listings...")
+    _GHOST_NOTES = {
+        "Unverified":   "Repost signal detected - verify this role is still open before applying.",
+        "Ghost Likely": "Strong repost history - this role may not be actively filling.",
+    }
     for job in relevant:
         result = detect_ghost(job)
         job["ghost_detection"] = result
         if result != "clean":
             logger.info(f"  [{result}] {job['company']}: {job['title']}")
+        if result in _GHOST_NOTES and job.get("hypothesis_signal"):
+            job["hypothesis_signal"] = job["hypothesis_signal"] + " " + _GHOST_NOTES[result]
         careers_url = find_careers_page_url(job.get("company", ""), job.get("url", ""))
         job["careers_page_url"] = careers_url
         if careers_url:
