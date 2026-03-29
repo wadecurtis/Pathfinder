@@ -37,9 +37,9 @@ All commands you'll use. Details are in the episodes below.
 
 Every time you change a file and want GitHub Actions to use it, you run three commands in order:
 
-1. `git add .` — packs up everything you changed
-2. `git commit -m "..."` — saves that package locally with a label describing what you changed
-3. `git push` — uploads it to GitHub so the next automated run picks it up
+1. `git add .` - packs up everything you changed
+2. `git commit -m "..."` - saves that package locally with a label describing what you changed
+3. `git push` - uploads it to GitHub so the next automated run picks it up
 
 **Commit** saves a snapshot on your machine. **Push** sends it to GitHub. You need both.
 
