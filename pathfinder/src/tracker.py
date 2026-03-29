@@ -213,6 +213,48 @@ def set_ghost_override(company: str, override: str, source: str = "email_reply")
         )
 
 
+def get_company_posting_context(company: str, title: str, current_url: str = "") -> dict:
+    """
+    Return posting history context for the hypothesis scoring prompt.
+
+    Queries job_cache for prior entries from the same company (excluding the
+    current job by URL) and returns:
+      role_repost_count  -- prior postings with a similar title (Jaccard >= 0.5)
+      company_open_roles -- distinct role titles from this company in the cache
+      company_is_new     -- True if no prior history exists for this company
+    """
+    company_key = company.strip().lower()
+    title_words = set(title.lower().split()) if title else set()
+
+    with _get_conn() as conn:
+        rows = conn.execute(
+            "SELECT title FROM job_cache WHERE lower(company) = ? AND url != ?",
+            (company_key, current_url or ""),
+        ).fetchall()
+
+    if not rows:
+        return {"role_repost_count": 0, "company_open_roles": 0, "company_is_new": True}
+
+    role_repost_count = 0
+    distinct_titles = set()
+    for row in rows:
+        cached_title = row["title"] or ""
+        distinct_titles.add(cached_title.strip().lower())
+        if title_words:
+            cached_words = set(cached_title.lower().split())
+            union = title_words | cached_words
+            if union:
+                overlap = len(title_words & cached_words) / len(union)
+                if overlap >= 0.5:
+                    role_repost_count += 1
+
+    return {
+        "role_repost_count": role_repost_count,
+        "company_open_roles": len(distinct_titles),
+        "company_is_new": False,
+    }
+
+
 def get_cached_companies() -> list[str]:
     """
     Return all distinct company names stored in job_cache.

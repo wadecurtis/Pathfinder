@@ -7,6 +7,7 @@ import yaml
 
 from .llm_client import get_llm_response
 from .models import JobListing
+from .tracker import get_company_posting_context
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ Title: {{title}}
 Company: {{company}}
 Location: {{location}}
 Description: {{description}}
-
+{{company_context}}
 ─── SCORING FRAMEWORK ───────────────────────────────────────
 
 QUALIFY — indicators that push toward YES:
@@ -158,17 +159,41 @@ Do not use em dashes (-) anywhere in your response. Use a plain hyphen (-) inste
 """
 
 
+def _format_company_context(ctx: dict) -> str:
+    """Format DB-derived posting history into a prompt section. Returns '' when no signal."""
+    lines = []
+    if ctx.get("role_repost_count", 0) > 0:
+        count = ctx["role_repost_count"]
+        times = "once" if count == 1 else f"{count} times"
+        lines.append(
+            f"- This company has posted a similar role {times} before "
+            f"(repost signal - suggests Backfill or Recovery)."
+        )
+    if ctx.get("company_open_roles", 0) > 1:
+        lines.append(
+            f"- This company has {ctx['company_open_roles']} distinct active roles in the dataset "
+            f"(multiple open headcount - suggests Capacity)."
+        )
+    if not lines:
+        return ""
+    return (
+        "\nCOMPANY POSTING HISTORY (use alongside posting signals to support or refine the "
+        "hypothesis category):\n" + "\n".join(lines) + "\n"
+    )
+
+
 CONFIG = load_config()
 SCORING_PROMPT_TEMPLATE = build_scoring_prompt(CONFIG)
 
 
-def score_job(job: JobListing) -> tuple[str, str, str, str, str]:
+def score_job(job: JobListing, company_context: str = "") -> tuple[str, str, str, str, str]:
     """Score a single job. Returns (score, reason, hypothesis_category, hypothesis_why, hypothesis_value)."""
     prompt = SCORING_PROMPT_TEMPLATE.format(
         title=job.title,
         company=job.company,
         location=job.location,
         description=(job.description or "")[:3000],
+        company_context=company_context,
     )
     try:
         response = get_llm_response(prompt, max_tokens=400)
@@ -201,7 +226,9 @@ def score_all(jobs: list[JobListing]) -> list[dict]:
     results = []
     logger.info(f"[Score] Scoring {len(jobs)} listings...")
     for job in jobs:
-        score, reason, hyp_category, hyp_why, hyp_value = score_job(job)
+        ctx = get_company_posting_context(job.company, job.title, job.url)
+        company_context = _format_company_context(ctx)
+        score, reason, hyp_category, hyp_why, hyp_value = score_job(job, company_context)
         icon = "YES" if score == "YES" else ("~~" if score == "MAYBE" else "NO")
         desc_len = len(job.description or "")
         logger.info(f"  [{icon}] {job.company}: {job.title} (desc: {desc_len} chars)")

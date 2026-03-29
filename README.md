@@ -6,7 +6,7 @@ Pathfinder searches LinkedIn every morning, scores every posting against your sp
 
 **What's in each digest:**
 - **AI scoring:** YES, MAYBE, or NO with a plain-language reason for every posting
-- **Hiring hypothesis:** two signals per relevant posting - why the company is hiring (backfill, new capability, capacity, recovery, or strategic bet) and what specific value the candidate brings to fill that gap
+- **Hiring hypothesis:** two signals per relevant posting - why the company is hiring (backfill, new capability, capacity, recovery, or strategic bet) and what specific value the candidate brings to address the challenge that hire exists to solve. The hypothesis category is informed by both posting language and historical tracking data: repeated postings of a similar role suggest Backfill or Recovery; multiple open headcount from the same company suggests Capacity. Signal improves as the tracker accumulates history.
 - **Ghost detection:** a badge on any posting showing signs of not being actively filled, based on age and repost history
 - **Careers page link:** a direct link to the company's jobs page when one can be found, or a flagged warning when it can't
 - **Reply-to-correct:** reply to any digest email to correct a wrong ghost result; the override applies to future runs automatically
