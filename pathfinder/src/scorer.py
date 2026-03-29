@@ -151,8 +151,8 @@ HYPOTHESIS_CATEGORY: pick exactly one using the definitions below — choose the
 
 HYPOTHESIS_WHY: One sentence. Based on signals in the posting, state why this company is hiring for
 this role right now.
-HYPOTHESIS_VALUE: One sentence. Based on the candidate's background above, state the specific value
-they bring to fill this gap.
+HYPOTHESIS_VALUE: One sentence. Based on the candidate's background and the hiring reason identified
+above, state the specific value they bring that directly addresses the challenge this hire exists to solve.
 
 Do not use em dashes (-) anywhere in your response. Use a plain hyphen (-) instead.
 """
