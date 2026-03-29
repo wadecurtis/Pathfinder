@@ -3,7 +3,16 @@ name: Pathfinder — Daily Digest
 on:
   schedule:
     - cron: "7 14 * * *"   # 6am PST / 7am PDT Vancouver, daily
-  workflow_dispatch:           # Manual trigger from GitHub anytime
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode: full run or test (2 queries, 5 results, sends email)'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - test
 
 jobs:
   scout:
@@ -48,7 +57,12 @@ jobs:
         run: pip install -r pathfinder/requirements.txt
 
       - name: Run scout
-        run: python pathfinder.py
+        run: |
+          if [ "${{ github.event.inputs.mode }}" = "test" ]; then
+            python pathfinder.py --test
+          else
+            python pathfinder.py
+          fi
 
       - name: Save seen-jobs cache
         if: always()
