@@ -370,6 +370,32 @@ The hypothesis category and signal are stored on the job object and rendered as 
 
 ---
 
+## Stage 19: Digest Quality and Public Repo Readiness *(commits 325edce → d4417f4)*
+
+**The problem:** The public repo had several friction points for new users and the digest output had accumulated quality debt: the hypothesis was a single blended sentence that wasn't actionable, NO results were invisible (no way to audit scoring), the ghost tracker's "Low Risk" badge signalled caution when it should signal confidence, and the README and build guide hadn't kept pace with what the tool actually did.
+
+**What was built — by commit:**
+
+`325edce` **Ghost tracker documentation in README** — Added a sentence to the intro paragraph explaining the repost signal mechanism (company + title + date stored per run, earlier date = repost). Added a `### How the ghost tracker works` subsection in the Ghost detection episode covering the `seen_jobs` vs `job_cache` distinction, the 10-entry cap, and the 90-day company inactivity expiry. Clarified that a fresh install has no history and meaningful signal arrives after 3–4 weeks.
+
+`ad42c5f` **Config flow fix for public forks** — Removed `config.yaml` from `.gitignore` so users with private forks can commit their config directly. Updated `daily.yml` to remove the `else cp config.example.yaml config.yaml` fallback — the workflow now writes the `CONFIG` secret if present, otherwise leaves the checked-out `config.yaml` untouched. Either path works; the workflow handles both without intervention. Updated README Episode 4 to reflect that committing `config.yaml` is correct for private forks.
+
+`9a80dc1` / `fd783e2` **Git commands clarification in README** — Replaced the terse git command table with a plain-language explanation of what `git add .`, `git commit`, and `git push` each do and why all three are required. Added the three-command sequence to the "Adjusting over time" section. Fixed a missing dash in the `git push` line that slipped through.
+
+`93a9912` **Scoring output refinement** — Expanded `REASON` from one sentence to two: sentence 1 names the key qualifier or disqualifier, sentence 2 explains specifically how it aligns with or conflicts with the candidate's background. Cut `HYPOTHESIS_SIGNAL` from two sentences to one to prevent the hypothesis from dominating the card. Raised `max_tokens` from 350 to 400.
+
+`d8e48a9` **NO results added to email digest** — Every job scored NO now appears in a `SCORED NO (n)` section at the bottom of the digest. Each entry shows title · company — disqualify reason on one line with a "View posting" link below. Rationale: scoring transparency. If the disqualify criteria are miscalibrated, the NO section surfaces it immediately. Three NO sample jobs added to `SAMPLE_JOBS` so `--preview` renders the section.
+
+`a0101e7` / `f16a38d` **Ghost signal appended to hypothesis** — After ghost detection runs, if the result is `Unverified` or `Ghost Likely`, a plain-text note is appended to the hypothesis signal: "Repost signal detected - verify this role is still open before applying" or "Strong repost history - this role may not be actively filling." Ghost note is stored as `job["ghost_note"]` and rendered separately from the LLM output. Sample jobs updated so `--preview` reflects the ghost note on flagged cards.
+
+`d41efcd` **Low Risk badge recoloured green** — `Low Risk` (posting 60+ days old, no repost history) was rendering amber, implying caution. Reframed: no repost history on an old posting is a positive signal — the role has been consistently listed without recycling. Badge changed to green (`#166534` on `#DCFCE7`). README badge table updated to match.
+
+`d4417f4` **Hypothesis split into two labelled signals** — The single `HYPOTHESIS_SIGNAL` field was replaced with two fields: `HYPOTHESIS_WHY` (why the company is hiring right now) and `HYPOTHESIS_VALUE` (what specific value the candidate brings to fill that gap). The prompt now instructs the LLM to produce both independently. The email card renders them as labelled lines: **Why they're hiring:** and **What you bring:**. The ghost note appends as a third muted italic line when present. All downstream consumers updated: `scorer.py` (prompt + parsing + return tuple), `digest.py` (card template + terminal output), `salesforce.py` (Hiring_Hypothesis__c field), `pathfinder.py` (sample data + ghost note logic). Preview SVG updated to reflect the new card layout across all three sections (QUALIFY, WORTH A LOOK, SCORED NO).
+
+**Key insight:** The hypothesis split was the highest-leverage change in this stage. Knowing why a company is hiring tells you how to frame an application. Knowing what value you specifically bring tells you what to lead with. A single blended sentence collapsed those two signals into one that was harder to act on. Separating them makes the digest genuinely useful as interview prep, not just as a filter.
+
+---
+
 ## What the finished system does
 
 On a daily schedule at 6am PST:
@@ -378,10 +404,10 @@ On a daily schedule at 6am PST:
 2. **Cache cleanup** — expires company records inactive for 90 days, trims each company to 10 repost-history entries, removes career page cache entries older than 90 days
 3. **Scout** — searches LinkedIn for Salesforce consulting role titles across Canada; deduplicates across sources and skips jobs already seen in prior runs (persisted via Actions cache)
 4. **AI filter** — drops obvious title mismatches in batches before scoring
-5. **Score** — each job evaluated against the candidate profile: YES / MAYBE / NO with a one-sentence reason
-6. **Hypothesis** — YES and MAYBE jobs get a forced-choice hiring hypothesis (Backfill / Capacity / New capability / Recovery / Strategic bet / Unclear) plus a 1-2 sentence signal
-7. **Ghost detection** — each YES and MAYBE job checked against two signals (posting age, repost history); result rendered as a badge on the email card. A separate careers page probe adds a direct link or a red warning to each card.
-8. **Email** — Outlook-compatible HTML digest sent with funnel metrics, scored cards with reason, hypothesis, and ghost badge, and apply buttons
+5. **Score** — each job evaluated against the candidate profile: YES / MAYBE / NO with a two-sentence reason (key signal + why it aligns or conflicts with the candidate's background)
+6. **Hypothesis** — YES and MAYBE jobs get a forced-choice hiring category (Backfill / Capacity / New capability / Recovery / Strategic bet / Unclear) with two labelled signals: why the company is hiring and what specific value the candidate brings
+7. **Ghost detection** — each YES and MAYBE job checked against two signals (posting age, repost history); result rendered as a colour-coded badge (green = low risk, orange = unverified, red = ghost likely). Ghost note appended to hypothesis when flagged. A separate careers page probe adds a direct link or a red warning to each card.
+8. **Email** — Outlook-compatible HTML digest sent with funnel metrics, scored cards with reason, hypothesis (why/value + ghost note), and ghost badge; NO results listed compactly at the bottom with disqualify reason and posting link for human review
 9. **Salesforce** — YES and MAYBE jobs pushed as Opportunities, deduped by URL, with stage, source, work type, and ghost detection state mapped to custom fields
 
 **Typical run:** ~300 scraped → ~120 AI filtered → 15-20 scored → 2-5 relevant. Token usage ~50-55k/day against a 100k daily limit on Groq's free tier.
