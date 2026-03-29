@@ -20,7 +20,7 @@ def build_no_results_email(metrics: dict) -> tuple[str, str]:
     BORDER = "#CBD5E1"
 
     date_str = datetime.now().strftime("%B %d, %Y")
-    subject  = f"Pathfinder — no new listings ({date_str})"
+    subject  = f"Pathfinder - no new listings ({date_str})"
 
     raw          = metrics.get("raw_scraped", 0)
     already_seen = metrics.get("already_seen", 0)
@@ -52,7 +52,7 @@ def build_no_results_email(metrics: dict) -> tuple[str, str]:
             <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
               <tr>
                 <td bgcolor="{CARD}" style="background-color:{CARD};border-radius:10px;padding:18px 20px;border:1px solid {BORDER};">
-                  <p style="margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:{MUTED};font-weight:600;">Pipeline &mdash; {date_str}</p>
+                  <p style="margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:{MUTED};font-weight:600;">Pipeline - {date_str}</p>
                   <p style="margin:0 0 12px;font-size:14px;color:{MUTED};line-height:1.9;">
                     {raw}&nbsp;scraped &nbsp;&middot;&nbsp;
                     {already_seen}&nbsp;already seen &nbsp;&middot;&nbsp;
@@ -105,7 +105,7 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
     BTN_TEXT  = "#FFFFFF"   # button label (white on any colored bg)
 
     date_str = datetime.now().strftime("%B %d, %Y")
-    subject  = f"Pathfinder — {len(yes_jobs)} strong fits, {len(maybe_jobs)} maybes ({date_str})"
+    subject  = f"Pathfinder - {len(yes_jobs)} strong fits, {len(maybe_jobs)} maybes ({date_str})"
 
     raw          = metrics.get("raw_scraped", 0)
     already_seen = metrics.get("already_seen", 0)
@@ -145,7 +145,7 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
                    border:1px solid {BORDER};">
           <p style="margin:0 0 10px;font-size:12px;text-transform:uppercase;
                     letter-spacing:1.5px;color:{MUTED};font-weight:600;"
-             class="t-muted">Pipeline &mdash; {date_str}</p>
+             class="t-muted">Pipeline - {date_str}</p>
           <p style="margin:0;font-size:14px;color:{MUTED};line-height:1.9;"
              class="t-muted">
             {raw}&nbsp;scraped &nbsp;&middot;&nbsp;
@@ -221,7 +221,7 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
                            letter-spacing:1.2px;color:{TEAL};font-weight:700;"
                    class="t-teal">Hypothesis &middot; {job['hypothesis_category']}</p>
                 <p style="margin:0;font-size:15px;color:{TEXT};line-height:1.5;"
-                   class="t-primary">{job['hypothesis_signal']}</p>
+                   class="t-primary">{job['hypothesis_signal'].replace('—', '-')}</p>
               </td>
             </tr>
           </table>"""
@@ -247,7 +247,7 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
         else:
             careers_line = (
                 '<p style="margin:8px 0 0;font-size:15px;font-weight:500;'
-                'color:#DC2626;">No careers page found &mdash; possible ghost.</p>'
+                'color:#DC2626;">No careers page found - possible ghost.</p>'
             )
 
         return f"""<tr>
@@ -265,9 +265,9 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
           <p style="margin:0 0 2px;font-size:15px;font-weight:600;color:{company_color};"
              class="{company_class}">{job['company']}</p>
           <p style="margin:0 0 10px;font-size:13px;color:{MUTED};"
-             class="t-muted">{job['location']}</p>
+             class="t-muted">{job['location'].replace('—', '-')}</p>
           <p style="margin:0 0 12px;font-size:15px;font-weight:500;color:#111111;font-style:italic;line-height:1.5;"
-             class="t-reason">{job['reason']}</p>
+             class="t-reason">{job['reason'].replace('—', '-')}</p>
           {hypothesis_html}
           <!-- Button: table wrapper required for bgcolor in Outlook -->
           <table cellpadding="0" cellspacing="0" role="presentation">

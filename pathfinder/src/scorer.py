@@ -129,8 +129,31 @@ SCORE: YES / MAYBE / NO
 REASON: one sentence naming the key qualifier or disqualifier that decided the score
 
 If SCORE is YES or MAYBE, also output:
-HYPOTHESIS_CATEGORY: pick exactly one — Backfill | Capacity | New capability | Recovery | Strategic bet | Unclear
-HYPOTHESIS_SIGNAL: one to two sentences — what specific signals in the posting reveal why they are hiring, and why this candidate fills that exact gap
+HYPOTHESIS_CATEGORY: pick exactly one using the definitions below — choose the best fit; use Unclear only if no category fits at all.
+
+  Backfill       — Someone left and the role is being refilled. Signals: single headcount, no growth
+                   language, role description reads like a job that has existed before, no mention of
+                   building or expanding.
+  Capacity       — Team is growing under an existing mandate. Signals: multiple open roles at the same
+                   company, explicit growth language ("expanding", "scaling", "growing team"), or
+                   headcount increase without a new direction.
+  New capability — Hiring for something the org doesn't currently have. Signals: "first", "build from
+                   scratch", "establish", "create", new platform or product named, reports to exec,
+                   founding role language.
+  Recovery       — A prior implementation failed or stalled and they need to fix it. Signals: "improve",
+                   "optimize", "rescue", "take over", "inherited", implicit or explicit mention of
+                   existing system problems, re-implementation language.
+  Strategic bet  — Org is making a deliberate platform or business shift. Signals: new product launch,
+                   acquisition integration, platform migration, AI/Agentforce initiative, explicit
+                   strategic priority language.
+  Unclear        — Posting lacks enough signal to distinguish between categories. Use only when none
+                   of the above fit — not as a default when evidence is thin.
+
+HYPOTHESIS_SIGNAL: Two sentences. Sentence 1: quote or closely paraphrase specific language from the
+posting that supports your category choice. Sentence 2: explain what that signal means about why this
+candidate fits the gap.
+
+Do not use em dashes (-) anywhere in your response. Use a plain hyphen (-) instead.
 """
 
 
@@ -147,7 +170,7 @@ def score_job(job: JobListing) -> tuple[str, str, str, str]:
         description=(job.description or "")[:3000],
     )
     try:
-        response = get_llm_response(prompt, max_tokens=250)
+        response = get_llm_response(prompt, max_tokens=350)
         score        = "NO"
         reason       = ""
         hyp_category = ""
@@ -161,6 +184,8 @@ def score_job(job: JobListing) -> tuple[str, str, str, str]:
                 hyp_category = line.replace("HYPOTHESIS_CATEGORY:", "").strip()
             elif line.startswith("HYPOTHESIS_SIGNAL:"):
                 hyp_signal = line.replace("HYPOTHESIS_SIGNAL:", "").strip()
+        reason     = reason.replace("—", "-")
+        hyp_signal = hyp_signal.replace("—", "-")
         return score, reason, hyp_category, hyp_signal
     except Exception as e:
         return "MAYBE", f"Could not score — review manually ({e})", "", ""
