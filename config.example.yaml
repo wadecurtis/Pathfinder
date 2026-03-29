@@ -52,12 +52,12 @@ profile:
 
 # ── SCORING CRITERIA ──────────────────────────────────────────────────────────
 # What makes a role a YES, MAYBE, or NO.
-# The AI applies these rules exactly as written — customize for your situation.
+# The AI applies these rules exactly as written, customize for your situation.
 #
 # SCORING PHILOSOPHY
 # Job postings describe ideal candidates, not minimum requirements. Years of
 # experience, preferred certifications, and seniority titles in a posting are
-# signals the AI weighs against the candidate's demonstrated outcomes — they
+# signals the AI weighs against the candidate's demonstrated outcomes. They
 # are NOT hard gates that trigger NO scores.
 #
 # The ONLY hard gates are items in the disqualify list below. Everything else
@@ -95,7 +95,7 @@ scoring:
     # Add a salary floor if you want to filter by compensation:
     # - "Salary explicitly stated below $XX CAD or $XX USD per hour"
     # Add employer types you want to avoid, e.g. company size, industry, or structure:
-    # - "Employer is a global SI: Accenture, Deloitte, IBM, Capgemini, Cognizant, or equivalent"
+    # - "Employer is a global SI"
     # - "Employer is a [type of company you want to exclude]"
 
 
@@ -135,6 +135,7 @@ search:
 
   title_keywords:
     - "salesforce"
+    - "sales force"
     - "solutions consultant"
     - "implementation consultant"
     - "solutions engineer"

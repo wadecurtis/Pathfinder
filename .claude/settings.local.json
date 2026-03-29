@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo:*)",
+      "Bash(git config:*)",
+      "Bash(git -C /c/Users/Wade/pathfinder-public remote -v)",
+      "Bash(git clone:*)"
+    ]
+  }
+}
