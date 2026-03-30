@@ -52,51 +52,115 @@ profile:
 
 # ── SCORING CRITERIA ──────────────────────────────────────────────────────────
 # What makes a role a YES, MAYBE, or NO.
-# The AI applies these rules exactly as written, customize for your situation.
 #
-# SCORING PHILOSOPHY
-# Job postings describe ideal candidates, not minimum requirements. Years of
-# experience, preferred certifications, and seniority titles in a posting are
-# signals the AI weighs against the candidate's demonstrated outcomes. They
-# are NOT hard gates that trigger NO scores.
+# DECISION HIERARCHY:
+#   1. Any disqualifier present = NO, no exceptions
+#   2. No disqualifiers + 3 or more core/strong qualify signals = YES
+#   3. No disqualifiers + partial qualify signals = MAYBE
+#   Neutral signals reduce confidence but cannot block a YES.
 #
-# The ONLY hard gates are items in the disqualify list below. Everything else
-# is weighed. A candidate with strong delivery evidence who meets 80% of
-# stated requirements will score MAYBE, not NO.
-#
-# Put things in disqualify only if you want them to be absolute dealbreakers
-# regardless of everything else. If you're unsure, leave it out — the AI will
-# weigh it appropriately against the candidate's profile.
+# CONFIDENCE:
+#   HIGH = unambiguous decision with strong direct evidence
+#   MEDIUM = clear decision but some signals are soft or inferred
+#   LOW = limited information or significant uncertainty in the posting
 
 scoring:
-  qualify:
-    - "Salesforce Sales Cloud as the primary platform"
-    - "SMB or mid-market client base (roughly 10-500 employees)"
-    - "Full lifecycle delivery: discovery through go-live through adoption"
-    - "Client-facing role where the consultant owns discovery"
-    - "Emphasis on adoption or change management"
-    - "Declarative automation depth (Flows, validation rules, assignment rules) without requiring Apex"
-    - "Agentforce or AI implementation is valued (does not need to be required)"
-    - "Remote-friendly, or contract and fractional structures accepted"
 
-  neutral:
-    - "CRM platform other than Salesforce, where Salesforce background is transferable"
-    - "Enterprise clients - lower fit than SMB/mid-market but not disqualifying"
-    - "Pre-sales or Solutions Engineer role — skills transfer, direction is away from implementation depth"
+  decision_framework:
 
-  disqualify:
-    - "Requires Apex, LWC, or custom development"
-    - "Requires domain expertise in BFSI, healthcare, government, or manufacturing"
-    - "Requires bilingual French and English"
-    - "Requires 5+ years of experience specifically at a consulting firm or in professional services"
-    - "Requires a certification not held as a mandatory requirement: CPQ, Experience Cloud, MuleSoft, Marketing Cloud, Service Cloud"
-    - "Junior admin or support role — ticket resolution, data entry, deduplication"
-    - "US-only role requiring US work authorization"
-    # Add a salary floor if you want to filter by compensation:
-    # - "Salary explicitly stated below $XX CAD or $XX USD per hour"
-    # Add employer types you want to avoid, e.g. company size, industry, or structure:
-    # - "Employer is a global SI"
-    # - "Employer is a [type of company you want to exclude]"
+    hierarchy:
+      - disqualify_overrides_all
+      - qualify_requires_majority_match
+      - neutral_only_if_no_disqualifiers
+
+    outputs:
+      decision: ["YES", "MAYBE", "NO"]
+      confidence: ["HIGH", "MEDIUM", "LOW"]
+
+    rules:
+      - "If ANY disqualifier is clearly present → decision = NO"
+      - "If NO disqualifiers AND 3+ qualify signals → decision = YES"
+      - "If NO disqualifiers AND partial qualify signals → decision = MAYBE"
+      - "Neutral signals can lower confidence but cannot override a YES"
+      - "Unclear or missing information defaults to MAYBE, not YES"
+
+
+  qualify_signals:
+
+    core:
+      - "Your primary platform is the primary platform in the role"
+      - "Role includes discovery, requirements gathering, or solution design"
+      - "Client-facing responsibility (not internal admin)"
+      - "End-to-end delivery exposure (discovery through go-live)"
+
+    strong:
+      - "Target client size matches your sweet spot"
+      - "Ownership of solution design or architecture decisions"
+      - "Focus on adoption, change management, or business outcomes"
+      - "Your core technical skills are explicitly required"
+      - "Emerging technology you have experience with is mentioned"
+
+    supporting:
+      - "Remote-friendly or flexible work structure"
+      - "Partner or ISV environment"
+      - "Cross-functional collaboration (sales, ops, stakeholders)"
+
+
+  neutral_signals:
+
+    acceptable_tradeoffs:
+      - "Larger client base than your target (more complexity, slower cycles)"
+      - "Adjacent platforms where your background transfers"
+      - "Pre-sales or solutions engineering (less build, more demo)"
+      - "Large global systems integrator environment (process-heavy, lower ownership)"
+
+    interpretation_rule:
+      - "Neutral signals reduce confidence but do not block a YES"
+      - "Multiple neutral signals without strong qualify signals → MAYBE"
+
+
+  disqualify_signals:
+
+    hard:
+      - "Requires technical skills outside your stack as a core responsibility"
+      - "Requires a language you do not speak"
+      - "Requires work authorization you do not hold"
+      - "Salary explicitly below your floor"
+      - "Role is junior admin or support (ticketing, data cleanup)"
+
+    experience_mismatch:
+      - "Requires years of experience in a context you do not have"
+      - "Requires certifications not held as mandatory"
+
+    domain_lockout:
+      - "Requires deep domain expertise in an industry you cannot credibly claim"
+
+
+  evidence_requirements:
+
+    must_extract:
+      - "1-2 direct quotes from the job description supporting the decision"
+      - "Explicit mention of any disqualifier triggered"
+      - "Explicit mention of strongest qualifying signal"
+
+    rules:
+      - "If no evidence is found, downgrade confidence"
+      - "Do not infer requirements that are not stated"
+
+
+  output_format:
+
+    required_fields:
+      - decision
+      - confidence
+      - reasoning_summary
+      - top_qualifier
+      - disqualifier_triggered
+      - evidence_quotes
+
+    constraints:
+      - "reasoning_summary must be under 40 words"
+      - "evidence_quotes must be verbatim text"
 
 
 # ── SEARCH SETTINGS ───────────────────────────────────────────────────────────

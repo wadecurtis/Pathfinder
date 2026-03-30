@@ -46,28 +46,56 @@ def build_scoring_prompt(config: dict) -> str:
     base_location  = loc_prefs.get("base", "")
     hybrid_ok      = loc_prefs.get("hybrid_ok", [])
 
-    qualify    = scoring.get("qualify", [])
-    neutral    = scoring.get("neutral", [])
-    disqualify = scoring.get("disqualify", [])
+    qualify_signals    = scoring.get("qualify_signals", {})
+    qualify_core       = qualify_signals.get("core", [])
+    qualify_strong     = qualify_signals.get("strong", [])
+    qualify_supporting = qualify_signals.get("supporting", [])
 
-    highlights_str     = "\n".join(f"- {h}" for h in highlights)
-    certs_held_str     = ", ".join(certs_held)
-    certs_progress_str = ", ".join(certs_progress)
-    languages_str      = ", ".join(languages)
-    hybrid_str         = ", ".join(hybrid_ok)
-    qualify_str        = "\n".join(f"- {q}" for q in qualify)
-    neutral_str        = "\n".join(f"- {n}" for n in neutral)
-    disqualify_str     = "\n".join(f"- {d}" for d in disqualify)
+    neutral_signals   = scoring.get("neutral_signals", {})
+    neutral_tradeoffs = neutral_signals.get("acceptable_tradeoffs", [])
+    neutral_interp    = neutral_signals.get("interpretation_rule", [])
+
+    disqualify_signals = scoring.get("disqualify_signals", {})
+    disqualify_hard    = disqualify_signals.get("hard", [])
+    disqualify_exp     = disqualify_signals.get("experience_mismatch", [])
+    disqualify_domain  = disqualify_signals.get("domain_lockout", [])
+
+    decision_framework = scoring.get("decision_framework", {})
+    framework_rules    = decision_framework.get("rules", [])
+
+    evidence_req     = scoring.get("evidence_requirements", {})
+    evidence_extract = evidence_req.get("must_extract", [])
+    evidence_rules   = evidence_req.get("rules", [])
+
+    def fmt(lst):
+        return "\n".join(f"- {i}" for i in lst)
+
+    highlights_str         = fmt(highlights)
+    certs_held_str         = ", ".join(certs_held)
+    certs_progress_str     = ", ".join(certs_progress)
+    languages_str          = ", ".join(languages)
+    hybrid_str             = ", ".join(hybrid_ok)
+    qualify_core_str       = fmt(qualify_core)
+    qualify_strong_str     = fmt(qualify_strong)
+    qualify_supporting_str = fmt(qualify_supporting)
+    neutral_tradeoffs_str  = fmt(neutral_tradeoffs)
+    neutral_interp_str     = fmt(neutral_interp)
+    disqualify_hard_str    = fmt(disqualify_hard)
+    disqualify_exp_str     = fmt(disqualify_exp)
+    disqualify_domain_str  = fmt(disqualify_domain)
+    framework_rules_str    = fmt(framework_rules)
+    evidence_extract_str   = fmt(evidence_extract)
+    evidence_rules_str     = fmt(evidence_rules)
 
     return f"""
 You are evaluating a job posting for this specific candidate:
 
-CANDIDATE: {name} — {framing}
+CANDIDATE: {name} - {framing}
 {highlights_str}
 - Certifications held: {certs_held_str}
 - Currently completing: {certs_progress_str}
 - Languages: {languages_str}
-- Location: {base_location} — open to remote or {hybrid_str} hybrid
+- Location: {base_location} - open to remote or {hybrid_str} hybrid
 
 JOB TO EVALUATE:
 Title: {{title}}
@@ -75,87 +103,99 @@ Company: {{company}}
 Location: {{location}}
 Description: {{description}}
 {{company_context}}
-─── SCORING FRAMEWORK ───────────────────────────────────────
+─── DECISION FRAMEWORK ──────────────────────────────────────
 
-QUALIFY — indicators that push toward YES:
-{qualify_str}
+Apply signals in this order:
+{framework_rules_str}
 
-NEUTRAL — present but not disqualifying:
-{neutral_str}
+CONFIDENCE levels:
+- HIGH: decision is unambiguous with strong direct evidence
+- MEDIUM: decision is clear but some signals are soft or inferred
+- LOW: limited information or significant uncertainty in the posting
 
-DISQUALIFY — any one of these scores NO immediately:
-{disqualify_str}
+─── QUALIFY SIGNALS ─────────────────────────────────────────
 
-─── SCORING PHILOSOPHY ───────────────────────────────────────
+Core (highest weight - these drive YES):
+{qualify_core_str}
 
-Job postings describe ideal candidates, not minimum requirements. Treat
-stated years of experience, preferred certifications, and seniority titles
-as signals to weigh — not hard gates. The only hard gates are items in the
-DISQUALIFY list above.
+Strong (significant weight):
+{qualify_strong_str}
 
-When evaluating experience gaps or missing preferred qualifications, weigh
-them against the candidate's demonstrated outcomes in the highlights above.
-Strong delivery evidence outweighs years-of-experience requirements. A
-candidate who meets 80% of requirements with clear proof of outcomes on the
-remaining 20% is a MAYBE, not a NO.
+Supporting (lower weight - tiebreakers only):
+{qualify_supporting_str}
 
-Specific guidance:
-- "5+ years required" and candidate has 4 with strong outcomes → weigh, don't gate
-- "Consulting firm experience preferred" → preferred is not required; weigh against highlights
-- "X certification required" → only a hard gate if listed in DISQUALIFY; otherwise a soft signal
-- "Senior" or "Lead" in title → signals scope, not a hard eligibility requirement
-- A certification the candidate is actively completing ({certs_progress_str}) → treat as nearly held
+─── NEUTRAL SIGNALS ─────────────────────────────────────────
 
-─── SCORING RULES ────────────────────────────────────────────
+Acceptable tradeoffs (reduce confidence, do not block YES):
+{neutral_tradeoffs_str}
 
-Score YES   — qualify criteria clearly outweigh neutrals and NO disqualifier is present.
-Score MAYBE — qualify criteria are present but soft gaps exist (experience, preferred certs,
-              seniority title), OR exactly one neutral applies. Use MAYBE when the candidate
-              has strong outcome evidence that offsets a stated preference or soft requirement.
-Score NO    — any hard disqualifier from the DISQUALIFY list is present, regardless of
-              qualify criteria. Do not score NO for soft gaps, preferred requirements,
-              or years-of-experience mismatches alone.
+Interpretation:
+{neutral_interp_str}
 
-LOCATION RULE (apply before scoring):
-- Score location OK if: fully remote, remote-first, or remote-friendly anywhere in Canada/globally.
-- Score location OK if: hybrid or in-office in {hybrid_str}.
-- Score location NO if: hybrid or in-office in any city outside {hybrid_str} with no remote option stated.
-- If location is unstated or ambiguous, assume remote is possible (location OK).
-A location NO is a hard disqualifier — score the overall job NO.
+─── DISQUALIFY SIGNALS ──────────────────────────────────────
 
-Do not hedge. Make a call.
+Hard (any one = NO immediately, no exceptions):
+{disqualify_hard_str}
+
+Experience mismatch (any one = NO):
+{disqualify_exp_str}
+
+Domain lockout (any one = NO):
+{disqualify_domain_str}
+
+─── LOCATION RULE ───────────────────────────────────────────
+
+Score location OK if: fully remote, remote-first, or remote-friendly anywhere in Canada/globally.
+Score location OK if: hybrid or in-office in {hybrid_str}.
+Score location NO if: hybrid or in-office in any city outside {hybrid_str} with no remote option stated.
+If location is unstated or ambiguous, assume remote is possible (location OK).
+A location NO is a hard disqualifier.
+
+─── EVIDENCE REQUIREMENTS ───────────────────────────────────
+
+Extract from the job description:
+{evidence_extract_str}
+
+Rules:
+{evidence_rules_str}
+
+─── OUTPUT FORMAT ───────────────────────────────────────────
 
 Respond in exactly this format:
-SCORE: YES / MAYBE / NO
-REASON: Two sentences. Sentence 1: name the key qualifier or disqualifier that decided the score. Sentence 2: explain specifically how it aligns with or conflicts with the candidate's background.
+DECISION: YES / MAYBE / NO
+CONFIDENCE: HIGH / MEDIUM / LOW
+REASONING: Under 40 words. State the key signal and how it aligns or conflicts with the candidate's background.
+TOP_QUALIFIER: The single strongest qualifying signal present, or NONE.
+DISQUALIFIER: The triggered disqualifier, or NONE.
+EVIDENCE: One verbatim quote from the job description supporting the decision.
 
-If SCORE is YES or MAYBE, also output:
-HYPOTHESIS_CATEGORY: pick exactly one using the definitions below — choose the best fit; use Unclear only if no category fits at all.
+If DECISION is YES or MAYBE, also output:
+HYPOTHESIS_CATEGORY: pick exactly one using the definitions below - choose the best fit; use Unclear only if no category fits at all.
 
-  Backfill       — Someone left and the role is being refilled. Signals: single headcount, no growth
+  Backfill       - Someone left and the role is being refilled. Signals: single headcount, no growth
                    language, role description reads like a job that has existed before, no mention of
                    building or expanding.
-  Capacity       — Team is growing under an existing mandate. Signals: multiple open roles at the same
+  Capacity       - Team is growing under an existing mandate. Signals: multiple open roles at the same
                    company, explicit growth language ("expanding", "scaling", "growing team"), or
                    headcount increase without a new direction.
-  New capability — Hiring for something the org doesn't currently have. Signals: "first", "build from
+  New capability - Hiring for something the org doesn't currently have. Signals: "first", "build from
                    scratch", "establish", "create", new platform or product named, reports to exec,
                    founding role language.
-  Recovery       — A prior implementation failed or stalled and they need to fix it. Signals: "improve",
+  Recovery       - A prior implementation failed or stalled and they need to fix it. Signals: "improve",
                    "optimize", "rescue", "take over", "inherited", implicit or explicit mention of
                    existing system problems, re-implementation language.
-  Strategic bet  — Org is making a deliberate platform or business shift. Signals: new product launch,
+  Strategic bet  - Org is making a deliberate platform or business shift. Signals: new product launch,
                    acquisition integration, platform migration, AI/Agentforce initiative, explicit
                    strategic priority language.
-  Unclear        — Posting lacks enough signal to distinguish between categories. Use only when none
-                   of the above fit — not as a default when evidence is thin.
+  Unclear        - Posting lacks enough signal to distinguish between categories. Use only when none
+                   of the above fit - not as a default when evidence is thin.
 
 HYPOTHESIS_WHY: One sentence. Based on signals in the posting, state why this company is hiring for
 this role right now.
 HYPOTHESIS_VALUE: One sentence. Based on the candidate's background and the hiring reason identified
 above, state the specific value they bring that directly addresses the challenge this hire exists to solve.
 
-Do not use em dashes (-) anywhere in your response. Use a plain hyphen (-) instead.
+Do not use em dashes in your response. Use a plain hyphen (-) instead.
 """
 
 
@@ -186,8 +226,11 @@ CONFIG = load_config()
 SCORING_PROMPT_TEMPLATE = build_scoring_prompt(CONFIG)
 
 
-def score_job(job: JobListing, company_context: str = "") -> tuple[str, str, str, str, str]:
-    """Score a single job. Returns (score, reason, hypothesis_category, hypothesis_why, hypothesis_value)."""
+def score_job(job: JobListing, company_context: str = "") -> tuple[str, str, str, str, str, str]:
+    """Score a single job.
+
+    Returns (score, reason, confidence, hypothesis_category, hypothesis_why, hypothesis_value).
+    """
     prompt = SCORING_PROMPT_TEMPLATE.format(
         title=job.title,
         company=job.company,
@@ -196,29 +239,54 @@ def score_job(job: JobListing, company_context: str = "") -> tuple[str, str, str
         company_context=company_context,
     )
     try:
-        response = get_llm_response(prompt, max_tokens=400)
+        response = get_llm_response(prompt, max_tokens=500)
         score        = "NO"
-        reason       = ""
-        hyp_category = ""
-        hyp_why      = ""
-        hyp_value    = ""
+        reasoning    = ""
+        confidence   = ""
+        top_qualifier = ""
+        disqualifier  = ""
+        evidence      = ""
+        hyp_category  = ""
+        hyp_why       = ""
+        hyp_value     = ""
         for line in response.strip().splitlines():
-            if line.startswith("SCORE:"):
-                score = line.replace("SCORE:", "").strip()
-            elif line.startswith("REASON:"):
-                reason = line.replace("REASON:", "").strip()
+            if line.startswith("DECISION:"):
+                score = line.replace("DECISION:", "").strip()
+            elif line.startswith("CONFIDENCE:"):
+                confidence = line.replace("CONFIDENCE:", "").strip()
+            elif line.startswith("REASONING:"):
+                reasoning = line.replace("REASONING:", "").strip()
+            elif line.startswith("TOP_QUALIFIER:"):
+                top_qualifier = line.replace("TOP_QUALIFIER:", "").strip()
+            elif line.startswith("DISQUALIFIER:"):
+                disqualifier = line.replace("DISQUALIFIER:", "").strip()
+            elif line.startswith("EVIDENCE:"):
+                evidence = line.replace("EVIDENCE:", "").strip()
             elif line.startswith("HYPOTHESIS_CATEGORY:"):
                 hyp_category = line.replace("HYPOTHESIS_CATEGORY:", "").strip()
             elif line.startswith("HYPOTHESIS_WHY:"):
                 hyp_why = line.replace("HYPOTHESIS_WHY:", "").strip()
             elif line.startswith("HYPOTHESIS_VALUE:"):
                 hyp_value = line.replace("HYPOTHESIS_VALUE:", "").strip()
+
+        # Compose reason for downstream display: reasoning summary + disqualifier or top qualifier
+        if disqualifier and disqualifier.upper() != "NONE":
+            reason = f"{reasoning} Disqualifier: {disqualifier}."
+        elif top_qualifier and top_qualifier.upper() != "NONE":
+            reason = f"{reasoning} Key signal: {top_qualifier}."
+        else:
+            reason = reasoning
+
+        for field in (reason, hyp_why, hyp_value, evidence):
+            field = field.replace("—", "-")
         reason    = reason.replace("—", "-")
         hyp_why   = hyp_why.replace("—", "-")
         hyp_value = hyp_value.replace("—", "-")
-        return score, reason, hyp_category, hyp_why, hyp_value
+        evidence  = evidence.replace("—", "-")
+
+        return score, reason, confidence, hyp_category, hyp_why, hyp_value
     except Exception as e:
-        return "MAYBE", f"Could not score — review manually ({e})", "", "", ""
+        return "MAYBE", f"Could not score - review manually ({e})", "", "", "", ""
 
 
 def score_all(jobs: list[JobListing]) -> list[dict]:
@@ -228,11 +296,11 @@ def score_all(jobs: list[JobListing]) -> list[dict]:
     for job in jobs:
         ctx = get_company_posting_context(job.company, job.title, job.url)
         company_context = _format_company_context(ctx)
-        score, reason, hyp_category, hyp_why, hyp_value = score_job(job, company_context)
+        score, reason, confidence, hyp_category, hyp_why, hyp_value = score_job(job, company_context)
         icon = "YES" if score == "YES" else ("~~" if score == "MAYBE" else "NO")
         desc_len = len(job.description or "")
         logger.info(f"  [{icon}] {job.company}: {job.title} (desc: {desc_len} chars)")
-        logger.info(f"       {reason}")
+        logger.info(f"       [{confidence}] {reason}")
         if hyp_category:
             logger.info(f"       [{hyp_category}] {hyp_why} / {hyp_value}")
         results.append({
@@ -243,6 +311,7 @@ def score_all(jobs: list[JobListing]) -> list[dict]:
             "source":              job.source,
             "date_posted":         job.date_posted,
             "score":               score,
+            "confidence":          confidence,
             "reason":              reason,
             "hypothesis_category": hyp_category,
             "hypothesis_why":      hyp_why,
