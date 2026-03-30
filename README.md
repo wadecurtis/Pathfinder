@@ -48,6 +48,7 @@ All commands you'll use. Details are in the episodes below.
 | `python pathfinder.py --preview` | Send a sample digest email (no API calls, no job queries) |
 | `python pathfinder.py --test` | Run pipeline in test mode (2 queries, capped results) |
 | `bash pathfinder/clean_db.sh` | Reset seen-jobs database (Mac/Git Bash) |
+| `python -c "import sqlite3; conn = sqlite3.connect('pathfinder/data/tracker.db'); conn.execute('DELETE FROM seen_jobs'); conn.commit(); conn.close(); print('Cleared')"` | Reset seen-jobs database (Windows PowerShell) |
 
 ### Git
 
