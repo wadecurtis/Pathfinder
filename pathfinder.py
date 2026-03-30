@@ -178,6 +178,7 @@ def main():
         "Ghost Likely": "Strong repost history - this role may not be actively filling.",
     }
     for job in relevant:
+        logger.info(f"  [Ghost] Checking {job['company']}: {job['title']}...")
         result = detect_ghost(job)
         job["ghost_detection"] = result
         if result != "clean":
