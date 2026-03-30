@@ -168,8 +168,11 @@ def find_careers_page_url(company: str, job_url: str = "") -> str | None:
     order and caches the result (including None, so repeated calls for the same
     company don't trigger fresh HTTP probes within the TTL window).
 
+    The entire probe is wrapped in a hard 12-second wall-clock timeout to
+    prevent DNS resolution hangs from stalling the run.
+
     Args:
-        company: Company name — used to derive the domain when job_url is a
+        company: Company name - used to derive the domain when job_url is a
                  job board link (e.g. LinkedIn).
         job_url: The job posting URL. Used as the domain source if it's not
                  a known job board.
@@ -177,6 +180,8 @@ def find_careers_page_url(company: str, job_url: str = "") -> str | None:
     Returns:
         URL string (e.g. 'https://plative.com/careers') or None.
     """
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+
     t = _tracker()
 
     cached_url, is_fresh = t.get_career_page_cache(company)
@@ -184,31 +189,41 @@ def find_careers_page_url(company: str, job_url: str = "") -> str | None:
         logger.debug(f"Careers page cache hit for {company!r}: {cached_url}")
         return cached_url
 
-    domain = _get_company_domain(company, job_url)
-    if not domain:
-        logger.debug(f"Could not derive domain for {company!r}")
+    def _probe() -> str | None:
+        domain = _get_company_domain(company, job_url)
+        if not domain:
+            logger.debug(f"Could not derive domain for {company!r}")
+            return None
+
+        logger.debug(f"Careers page lookup - company={company!r} domain={domain!r}")
+
+        candidates = [
+            f"https://{domain}/careers",
+            f"https://{domain}/jobs",
+            f"https://{domain}/careers/open-roles",
+            f"https://{domain}/about/careers",
+            f"https://jobs.{domain}",
+        ]
+
+        for url in candidates:
+            try:
+                resp = requests.get(url, headers=_HEADERS, timeout=4, allow_redirects=True)
+                if resp.status_code == 200:
+                    logger.debug(f"Careers page found: {url}")
+                    return url
+            except Exception as exc:
+                logger.debug(f"Careers page probe error for {url}: {exc}")
         return None
 
-    logger.debug(f"Careers page lookup — company={company!r} domain={domain!r}")
-
-    candidates = [
-        f"https://{domain}/careers",
-        f"https://{domain}/jobs",
-        f"https://{domain}/careers/open-roles",
-        f"https://{domain}/about/careers",
-        f"https://jobs.{domain}",
-    ]
-
     found_url = None
-    for url in candidates:
-        try:
-            resp = requests.get(url, headers=_HEADERS, timeout=5, allow_redirects=True)
-            if resp.status_code == 200:
-                logger.debug(f"Careers page found: {url}")
-                found_url = url
-                break
-        except Exception as exc:
-            logger.debug(f"Careers page probe error for {url}: {exc}")
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_probe)
+            found_url = future.result(timeout=12)
+    except FuturesTimeoutError:
+        logger.debug(f"Careers page lookup timed out for {company!r}")
+    except Exception as exc:
+        logger.debug(f"Careers page lookup failed for {company!r}: {exc}")
 
     t.set_career_page_cache(company, found_url)
     return found_url
