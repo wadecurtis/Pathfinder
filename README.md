@@ -1,4 +1,4 @@
-# Pathfinder: Cut the Job Search BS
+# Pathfinder: Seek and Apply
 
 Job searching produces too many listings and no good way to evaluate them. Reading through dozens of postings a day to figure out which ones actually fit your background takes real time, and most of them don't fit. The ones that do are buried.
 
