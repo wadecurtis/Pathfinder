@@ -46,7 +46,8 @@ profile:
     base: "Your City, Province/State"
     hybrid_ok:
       - "Your City"
-      - "Nearby City"
+      - "Nearby City 1"
+      - "Nearby City 2"
     open_to_remote: true
 
 
@@ -104,6 +105,7 @@ scoring:
       - "Remote-friendly or flexible work structure"
       - "Partner or ISV environment"
       - "Cross-functional collaboration (sales, ops, stakeholders)"
+      - "Role builds direct transferable experience toward your target role type and is a strong platform match"
 
 
   neutral_signals:
@@ -127,6 +129,7 @@ scoring:
       - "Requires work authorization you do not hold"
       - "Salary explicitly below your floor"
       - "Role is junior admin or support (ticketing, data cleanup)"
+      - "Role has no connection to your target platform and no clear path toward your target role"
 
     experience_mismatch:
       - "Requires years of experience in a context you do not have"
@@ -142,6 +145,7 @@ scoring:
       - "1-2 direct quotes from the job description supporting the decision"
       - "Explicit mention of any disqualifier triggered"
       - "Explicit mention of strongest qualifying signal"
+      - "Educational requirements (degree, certification) when explicitly stated - flag in reasoning but do not use as a hard gate"
 
     rules:
       - "If no evidence is found, downgrade confidence"

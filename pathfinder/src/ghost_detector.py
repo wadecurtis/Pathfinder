@@ -138,49 +138,64 @@ def _check_repost_history(company: str, title: str, current_date_posted: str) ->
         return False
 
 
-def _get_company_domain(company: str, job_url: str = "") -> str:
+def _generate_domain_candidates(company: str, job_url: str = "") -> list[str]:
     """
-    Derive the most likely company domain.
+    Return a prioritised list of domain candidates to probe for a company.
 
-    Tries the job URL first (if it isn't a known job board), then falls back to
-    slugifying the company name and guessing a .com domain.
-    Returns a bare domain like 'plative.com', or '' if none can be derived.
+    Tries the job URL domain first (most accurate), then generates slug variants
+    across common TLDs and hyphenation styles.
     """
+    candidates = []
+
+    # Most accurate: domain extracted directly from the job URL
     if job_url:
         try:
             netloc = urlparse(job_url).netloc.lower().removeprefix("www.")
             if netloc and not any(board in netloc for board in _JOB_BOARDS):
-                return netloc
+                candidates.append(netloc)
         except Exception:
             pass
 
-    slug = _CORP_SUFFIXES.sub("", company).strip()
-    slug = re.sub(r"[^\w\s]", "", slug).strip()
-    slug = re.sub(r"\s+", "", slug).lower()
-    return f"{slug}.com" if slug else ""
+    # Slug generation: strip corporate suffixes then build two variants
+    slug_base = _CORP_SUFFIXES.sub("", company).strip()
+    slug_base = re.sub(r"[^\w\s-]", "", slug_base).strip()
+
+    slug_plain    = re.sub(r"[\s-]+", "", slug_base).lower()       # crosscountryconsulting
+    slug_hyphen   = re.sub(r"\s+", "-", slug_base.strip()).lower()  # crosscountry-consulting
+
+    slugs = list(dict.fromkeys(s for s in [slug_plain, slug_hyphen] if s))
+
+    tlds = [".com", ".ai", ".io", ".ca", ".co"]
+    for slug in slugs:
+        for tld in tlds:
+            domain = f"{slug}{tld}"
+            if domain not in candidates:
+                candidates.append(domain)
+
+    return candidates
 
 
 def find_careers_page_url(company: str, job_url: str = "") -> str | None:
     """
     Return the URL of the company's careers page, or None if not found.
 
-    Checks the 7-day cache first. On a cache miss, probes standard paths in
-    order and caches the result (including None, so repeated calls for the same
-    company don't trigger fresh HTTP probes within the TTL window).
+    Checks the 7-day cache first. On a cache miss, probes all domain variants
+    and path suffixes in parallel, returning the first 200 response found.
 
-    The entire probe is wrapped in a hard 12-second wall-clock timeout to
+    The entire probe is wrapped in a hard 15-second wall-clock timeout to
     prevent DNS resolution hangs from stalling the run.
 
     Args:
-        company: Company name - used to derive the domain when job_url is a
-                 job board link (e.g. LinkedIn).
-        job_url: The job posting URL. Used as the domain source if it's not
-                 a known job board.
+        company: Company name - used to derive domain candidates when job_url
+                 is a job board link (e.g. LinkedIn).
+        job_url: The job posting URL. Used as the primary domain source if it
+                 is not a known job board.
 
     Returns:
         URL string (e.g. 'https://plative.com/careers') or None.
     """
-    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from concurrent.futures import TimeoutError as FuturesTimeoutError
 
     t = _tracker()
 
@@ -190,36 +205,49 @@ def find_careers_page_url(company: str, job_url: str = "") -> str | None:
         return cached_url
 
     def _probe() -> str | None:
-        domain = _get_company_domain(company, job_url)
-        if not domain:
-            logger.debug(f"Could not derive domain for {company!r}")
+        domains = _generate_domain_candidates(company, job_url)
+        if not domains:
+            logger.debug(f"Could not derive any domain candidates for {company!r}")
             return None
 
-        logger.debug(f"Careers page lookup - company={company!r} domain={domain!r}")
+        logger.debug(f"Careers page lookup - company={company!r} domains={domains[:3]!r}...")
 
-        candidates = [
-            f"https://{domain}/careers",
-            f"https://{domain}/jobs",
-            f"https://{domain}/careers/open-roles",
-            f"https://{domain}/about/careers",
-            f"https://jobs.{domain}",
-        ]
+        # Build full URL candidate list: primary paths for all domains,
+        # plus /jobs fallback and jobs. subdomain for .com variants only
+        primary_paths = ["/careers", "/jobs", "/careers/open-roles", "/about/careers"]
+        probe_urls = []
+        for domain in domains:
+            for path in primary_paths:
+                probe_urls.append(f"https://{domain}{path}")
+            if domain.endswith(".com"):
+                probe_urls.append(f"https://jobs.{domain}")
 
-        for url in candidates:
+        def check(url: str) -> str | None:
             try:
                 resp = requests.get(url, headers=_HEADERS, timeout=4, allow_redirects=True)
                 if resp.status_code == 200:
-                    logger.debug(f"Careers page found: {url}")
                     return url
-            except Exception as exc:
-                logger.debug(f"Careers page probe error for {url}: {exc}")
+            except Exception:
+                pass
+            return None
+
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            futures = {pool.submit(check, url): url for url in probe_urls}
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    logger.debug(f"Careers page found: {result}")
+                    for f in futures:
+                        f.cancel()
+                    return result
+
         return None
 
     found_url = None
     try:
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(_probe)
-            found_url = future.result(timeout=12)
+            found_url = future.result(timeout=15)
     except FuturesTimeoutError:
         logger.debug(f"Careers page lookup timed out for {company!r}")
     except Exception as exc:
