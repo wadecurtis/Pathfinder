@@ -198,6 +198,7 @@ def main():
     if not relevant:
         logger.info("[Pathfinder] Nothing relevant this run.")
         logger.info(f"[Pathfinder] Funnel: {metrics.get('raw_scraped',0)} scraped → {len(jobs_to_score)} scored → 0 relevant")
+        send_email(*build_no_results_email(metrics))
         return
 
     # 3. Output — always print; also send email (test mode sends the real HTML for rendering checks)
