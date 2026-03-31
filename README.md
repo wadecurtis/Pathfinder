@@ -376,33 +376,99 @@ The AI cannot score well on vague claims. Specific and outcome-focused highlight
 
 #### scoring: what makes a role a YES, MAYBE, or NO
 
-The AI applies these rules exactly as written.
+Scoring uses a three-tier decision framework. The AI applies signals in a fixed order: disqualifiers are checked first, then qualify signal strength determines YES or MAYBE, then neutral signals adjust confidence.
 
-**`qualify`**: signals that push toward YES:
+**Decision hierarchy:**
+1. Any disqualifier present = NO immediately, no exceptions
+2. No disqualifiers + 3 or more core/strong qualify signals = YES
+3. No disqualifiers + partial qualify signals = MAYBE
+4. Neutral signals reduce confidence but cannot change a YES to a NO
+
+Every scored result includes a **confidence level** (HIGH, MEDIUM, or LOW) alongside the YES/MAYBE/NO decision, and a verbatim quote from the job description as evidence.
+
+---
+
+**`qualify_signals`** are split into three tiers by weight:
+
 ```yaml
-qualify:
-  - "Salesforce Sales Cloud as the primary platform"
-  - "SMB or mid-market client base"
-  - "Full lifecycle delivery: discovery through go-live"
+qualify_signals:
+
+  core:              # Highest weight - these drive YES decisions
+    - "Your primary platform is the primary platform in the role"
+    - "Role includes discovery, requirements gathering, or solution design"
+
+  strong:            # Significant weight
+    - "Target client size matches your sweet spot"
+    - "Ownership of solution design or architecture decisions"
+
+  supporting:        # Lower weight - tiebreakers only
+    - "Remote-friendly or flexible work structure"
+    - "Role builds direct transferable experience toward your target role type"
 ```
 
-**`neutral`**: present but not disqualifying:
+Core signals carry the most weight. A role with 3+ core signals and no disqualifiers scores YES. Supporting signals alone cannot drive a YES.
+
+---
+
+**`neutral_signals`** are present but do not disqualify:
+
 ```yaml
-neutral:
-  - "Enterprise clients (lower fit, not a dealbreaker)"
-  - "Pre-sales or Solutions Engineer (skills transfer, different direction)"
+neutral_signals:
+
+  acceptable_tradeoffs:
+    - "Larger client base than your target"
+    - "Adjacent platforms where your background transfers"
+
+  interpretation_rule:
+    - "Neutral signals reduce confidence but do not block a YES"
+    - "Multiple neutral signals without strong qualify signals → MAYBE"
 ```
 
-**`disqualify`**: hard dealbreakers. Any single one scores the role NO immediately:
+---
+
+**`disqualify_signals`** are hard gates organized by type:
+
 ```yaml
-disqualify:
-  - "Requires [specific technical skill you don't have]"
-  - "Requires bilingual [language] and English"
-  - "Salary below [your floor]"
-  - "Requires work authorization you don't hold"
+disqualify_signals:
+
+  hard:                    # Any one = NO immediately
+    - "Requires technical skills outside your stack as a core responsibility"
+    - "Requires work authorization you do not hold"
+    - "Salary explicitly below your floor"
+    - "Role has no connection to your target platform"
+
+  experience_mismatch:     # Any one = NO
+    - "Requires years of experience in a context you do not have"
+    - "Requires certifications not held as mandatory"
+
+  domain_lockout:          # Any one = NO
+    - "Requires deep domain expertise in an industry you cannot credibly claim"
 ```
 
-Be specific: `"Requires CPQ certification as mandatory"` not just `"CPQ"`.
+Any single disqualifier across any category scores the role NO regardless of how many qualify signals are present.
+
+---
+
+**`evidence_requirements`** control what the AI must extract from the job description:
+
+```yaml
+evidence_requirements:
+
+  must_extract:
+    - "1-2 direct quotes from the job description supporting the decision"
+    - "Explicit mention of any disqualifier triggered"
+    - "Educational requirements when stated - flag in reasoning but not a hard gate"
+
+  rules:
+    - "If no evidence is found, downgrade confidence"
+    - "Do not infer requirements that are not stated"
+```
+
+This is what produces the verbatim evidence quote on each card and prevents the AI from inventing disqualifiers that aren't in the posting.
+
+---
+
+Be specific in every signal. `"Requires CPQ certification as mandatory"` not just `"CPQ"`. Vague signals produce inconsistent scoring.
 
 ---
 
