@@ -4,7 +4,7 @@ pathfinder.py — Daily job digest. Searches, filters, and scores roles. Emails 
 Usage:
     python pathfinder.py           # Full run — search, score, email digest
     python pathfinder.py --test    # Lightweight test — 2 queries, 5 results each,
-                                   # skip AI filter, score top 2, print to terminal
+                                   # skip AI filter, score top 1, print to terminal
                                    # and send the real HTML email. Use this to
                                    # validate config and rendering before the first
                                    # GitHub Actions run.
@@ -97,8 +97,8 @@ SAMPLE_METRICS = {
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", action="store_true",
-                        help="Lightweight test: 2 queries, 5 results each, skip AI filter, "
-                             "score top 2, print to terminal and send the real HTML email.")
+                        help="Lightweight test: 1 query, 3 results, skip AI filter, "
+                             "score top 1, print to terminal and send the real HTML email.")
     parser.add_argument("--preview", action="store_true",
                         help="Send a sample email with dummy data to check rendering. "
                              "No job board queries, no scoring.")
@@ -112,7 +112,7 @@ def main():
         return
 
     if args.test:
-        logger.info("\n[Pathfinder] TEST MODE — 2 queries · 5 results each · skip AI filter · score top 2 · email sent")
+        logger.info("\n[Pathfinder] TEST MODE — 1 query · 3 results · skip AI filter · score top 1 · email sent")
     else:
         logger.info("\n[Pathfinder] Starting...")
 
@@ -146,7 +146,7 @@ def main():
     logger.info("[Pathfinder] Searching...")
     metrics = {}
     if args.test:
-        jobs = scout_jobs(_metrics=metrics, max_queries=2, max_per_query_override=5, skip_ai_filter=True)
+        jobs = scout_jobs(_metrics=metrics, max_queries=1, max_per_query_override=3, skip_ai_filter=True)
     else:
         jobs = scout_jobs(_metrics=metrics)
 
@@ -160,10 +160,10 @@ def main():
             send_email(*build_no_results_email(metrics))
         return
 
-    # 2. Score — cap at 2 in test mode to limit token usage
-    jobs_to_score = jobs[:2] if args.test else jobs
-    if args.test and len(jobs) > 2:
-        logger.info(f"[Pathfinder] Scoring top 2 of {len(jobs)} (test mode cap)")
+    # 2. Score — cap at 1 in test mode to limit token usage
+    jobs_to_score = jobs[:1] if args.test else jobs
+    if args.test and len(jobs) > 1:
+        logger.info(f"[Pathfinder] Scoring top 1 of {len(jobs)} (test mode cap)")
 
     scored = score_all(jobs_to_score)
     metrics["scored_yes"]   = sum(1 for j in scored if j["score"] == "YES")

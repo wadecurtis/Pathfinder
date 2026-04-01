@@ -46,7 +46,7 @@ All commands you'll use. Details are in the episodes below.
 | `.\.venv\Scripts\Activate.ps1` | Activate virtual environment (Windows - PowerShell) |
 | `source .venv/bin/activate` | Activate virtual environment (Mac) |
 | `python pathfinder.py --preview` | Send a sample digest email (no API calls, no job queries) |
-| `python pathfinder.py --test` | Run pipeline in test mode (2 queries, capped results) |
+| `python pathfinder.py --test` | Run pipeline in test mode (1 query, 1 result scored) |
 | `bash pathfinder/clean_db.sh` | Reset seen-jobs database (Mac/Git Bash) |
 | `python -c "import sqlite3; conn = sqlite3.connect('pathfinder/data/tracker.db'); conn.execute('DELETE FROM seen_jobs'); conn.commit(); conn.close(); print('Cleared')"` | Reset seen-jobs database (Windows PowerShell) |
 
@@ -576,9 +576,9 @@ python pathfinder.py --test
 ```
 
 Test mode:
-- Searches your first 2 queries only
-- Caps at 5 results per query
-- Scores only the top 5 results
+- Searches your first query only
+- Fetches 3 results
+- Scores 1 result
 - Sends the real HTML email
 
 Takes 1-2 minutes. The terminal shows each score and reason. If the right roles are scoring YES and your disqualifiers are catching what they should, you're ready.
