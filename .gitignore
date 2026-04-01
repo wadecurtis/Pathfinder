@@ -7,6 +7,6 @@ __pycache__/
 *.pyc
 .sfdx/
 build doc.md
-build process.md
-case study.md
+Build Process.md
+Case Study.md
 config.yaml
