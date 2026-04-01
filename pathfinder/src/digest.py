@@ -228,7 +228,7 @@ def build_html(jobs: list[dict], metrics: dict) -> tuple[str, str]:
                            letter-spacing:1.2px;color:{TEAL};font-weight:700;"
                    class="t-teal">Hypothesis &middot; {job['hypothesis_category']}</p>
                 <p style="margin:0 0 4px;font-size:15px;color:{TEXT};line-height:1.5;"
-                   class="t-primary"><strong>Why they&rsquo;re hiring:</strong> {job['hypothesis_why'].replace('—', '-')}</p>
+                   class="t-primary"><strong>Why they're hiring:</strong> {job['hypothesis_why'].replace('—', '-')}</p>
                 <p style="margin:0;font-size:15px;color:{TEXT};line-height:1.5;"
                    class="t-primary"><strong>What you bring:</strong> {job['hypothesis_value'].replace('—', '-')}</p>
                 {ghost_note_html}
