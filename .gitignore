@@ -6,3 +6,7 @@ pathfinder/config/*.backup
 __pycache__/
 *.pyc
 .sfdx/
+build doc.md
+build process.md
+case study.md
+config.yaml
