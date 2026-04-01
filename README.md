@@ -778,7 +778,9 @@ CloudCo confirmed ghost, role has been up for months with no response.
 False negative on BuildCorp - they've had this exact role open since January.
 ```
 
-The correction overrides all automated checks for that company until the 90-day window expires, at which point the detector re-evaluates from scratch on the next run.
+The correction applies to that company for 90 days, at which point the detector re-evaluates from scratch on the next run.
+
+The reply correction system is functional but lightly tested. Overrides apply to future postings from that company, not the one you responded to.
 
 ---
 
