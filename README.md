@@ -12,7 +12,7 @@ Pathfinder searches LinkedIn every morning, scores every posting against your sp
 - **Reply-to-correct:** reply to any digest email to correct a wrong ghost result; the override applies to future runs automatically
 - **Salesforce push:** YES and MAYBE results can be pushed directly into a Salesforce Career Pipeline object (optional)
 
-**Ghost detection gets better the longer Pathfinder runs.** Each daily run stores every scraped job, company, title, and posting date, in a local database. When the same company re-posts a similar role with a newer date, that's the repost signal. After a few weeks of history, Pathfinder recognizes recurring phantom listings that haven't been filled. A fresh install has no history to draw on. Expect meaningful ghost signal after 3–4 weeks of daily runs.
+**Ghost detection gets better the longer Pathfinder runs.** Each daily run stores every scraped job, company, title, and posting date, in a local database. When the same company re-posts a similar role with a newer date, that's the repost signal. After a few days of history, Pathfinder recognizes recurring phantom listings that haven't been filled. A fresh install has no history to draw on. Expect meaningful ghost signal after ~7 days of daily runs.
 
 ![Sample output showing a YES card with hiring hypothesis and a filtered NO card](docs/preview.svg)
 
@@ -722,7 +722,7 @@ python pathfinder.py --preview
 
 This sends a sample email with all badge states populated using hardcoded data - no live scraping or API calls required.
 
-Ghost detection becomes more useful over time as the database builds history on companies and roles. Expect meaningful signal after 3–4 weeks of daily runs.
+Ghost detection becomes more useful over time as the database builds history on companies and roles. Expect meaningful signal after ~7 days of daily runs.
 
 ### Correcting a wrong result
 
