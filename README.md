@@ -255,24 +255,44 @@ The two hardest parts of config.yaml to write are your `highlights` and your `sc
 Paste this into [Claude](https://claude.ai) or ChatGPT and answer the questions it asks. Then paste the result into the `highlights:` section of `config.yaml`.
 
 ```
-I'm setting up an automated job scoring tool that evaluates postings against my background.
-The tool reads a list of "highlights" - specific, evidence-based facts about my experience -
-and uses them to decide whether a job is a YES, MAYBE, or NO for me.
+I'm setting up Pathfinder, an automated job scoring tool that evaluates
+postings against my specific background using an LLM. The scoring engine
+reads my highlights and uses them to decide whether a role is QUALIFY,
+NEUTRAL, or DISQUALIFY.
 
-I need you to interview me to build this list. Ask me 6-8 questions, one at a time, that will
-surface the most specific and outcome-focused facts about my background. Focus on:
-- What I've delivered end-to-end, not just what tools I've used
-- Quantified outcomes where possible (revenue, team size, deal count, system scope)
-- Certifications, with dates if recent
-- Where I'm strong versus where I'm still building
+The highlights need to be evidence-based facts, not claims. The LLM
+scores what it can verify from the text. Vague statements produce
+vague scores.
 
-After I answer all your questions, write the highlights list in this format:
-- "Fact one in plain language"
-- "Fact two in plain language"
-...
+Interview me one question at a time to surface the most useful facts.
+Focus on:
 
-Keep each bullet to one sentence. Be specific and concrete. No vague claims like "strong communicator"
-or "fast learner." If I give you vague answers, push back and ask for specifics.
+- What I delivered end-to-end, not just what tools I used
+- Specific outcomes: revenue, deal count, team size, system scope,
+  timelines
+- Situations where I inherited a problem someone else created and fixed it
+- Where my background is unconventional and why that's an advantage,
+  not a gap
+- Certifications held and in progress, with recency if relevant
+- Where I'm genuinely strong versus where I'm still building. The
+  tool needs to know both to score accurately
+
+After I answer all your questions, write the highlights in this exact
+format, one fact per line, ready to paste directly into config.yaml:
+
+    highlights:
+      - "Fact one in plain language"
+      - "Fact two in plain language"
+
+Rules for the output:
+- One sentence per bullet
+- Specific and concrete. No "strong communicator" or "fast learner"
+- Outcomes over activities. "ran $Xm through a system I built" not
+  "managed a CRM"
+- If I give you a vague answer, push back and ask for the number or
+  the specific outcome before moving on
+
+Start with question 1.
 ```
 
 ### Prompt 2 - Validate your scoring criteria
@@ -280,33 +300,54 @@ or "fast learner." If I give you vague answers, push back and ask for specifics.
 Once you have a draft `qualify`, `neutral`, and `disqualify` list, paste this into Claude or ChatGPT along with a few real job descriptions you've seen recently. It will tell you how each would score and whether your criteria are calibrated correctly.
 
 ```
-I'm configuring a job scoring tool. It evaluates postings as YES, MAYBE, or NO using these rules:
+I'm configuring Pathfinder's scoring criteria. Here is how the scoring
+engine works:
 
-QUALIFY (push toward YES):
+DISQUALIFY signals are checked first. Any single disqualifier scores
+the role NO immediately, regardless of how many qualify signals are
+present. These are absolute hard gates.
+
+QUALIFY signals determine YES vs MAYBE. Three or more core qualify
+signals with no disqualifiers scores YES. Partial qualify signals
+score MAYBE.
+
+NEUTRAL signals reduce confidence but cannot override a YES decision.
+
+Years of experience stated in a posting is a soft signal only. It
+does not trigger a disqualify on its own. A candidate with strong
+demonstrated outcomes can score MAYBE even when stated experience
+requirements aren't fully met.
+
+Here are my current criteria:
+
+QUALIFY:
 [paste your qualify list]
 
-NEUTRAL (present but not disqualifying):
+NEUTRAL:
 [paste your neutral list]
 
-DISQUALIFY (any one = automatic NO):
+DISQUALIFY:
 [paste your disqualify list]
 
-I'm going to paste 3 job descriptions below. For each one:
-1. Score it YES, MAYBE, or NO based on my criteria
-2. Name the single most important qualify or disqualify signal that decided the score
-3. Flag anything where my criteria are ambiguous, too broad, or likely to produce false positives/negatives
+I'm going to paste 3 job descriptions. For each one:
+1. Score it QUALIFY, NEUTRAL result, or DISQUALIFY using my criteria
+   exactly as written
+2. Name the single signal that drove the decision
+3. Flag any criteria that are ambiguous, too broad, or likely to
+   produce false positives or false negatives on roles like this one
 
-After all three, give me a one-paragraph assessment of whether my criteria are well-calibrated
-or need adjustment, and suggest any specific changes.
+After all three, give me a one-paragraph assessment: are my criteria
+well-calibrated for the roles I'm actually targeting, and what one or
+two specific changes would improve precision the most?
 
 Job 1:
-[paste a job description]
+[paste a job description you'd expect to QUALIFY]
 
 Job 2:
-[paste a job description]
+[paste a job description you'd expect to DISQUALIFY]
 
 Job 3:
-[paste a job description]
+[paste a job description you're genuinely unsure about]
 ```
 
 Use the feedback to tighten your criteria before running Pathfinder live.
