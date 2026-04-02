@@ -366,7 +366,9 @@ First, copy the example config to create your own:
 cp config.example.yaml config.yaml
 ```
 
-`config.yaml` will be committed to your private fork - that's how GitHub Actions reads it. Your fork is private, so this is safe.
+Then open `.gitignore` in the root of your fork and remove the line that says `config.yaml`. This line exists in the template repo but you need to delete it so Git will track your config.
+
+`config.yaml` needs to be committed to your private fork — that's how GitHub Actions reads it. Your fork is private, so this is safe.
 
 ### pathfinder/.env
 
@@ -623,16 +625,15 @@ This makes Pathfinder run every morning automatically. Your computer does not ne
 
 Go to your forked repo on GitHub, then Settings > Secrets and variables > Actions > New repository secret.
 
-Add these two secrets:
+Add this secret:
 
 | Name | Value |
 |---|---|
-| `CONFIG` | Your full `config.yaml` contents, pasted as-is |
 | `KEYS` | Your full `pathfinder/.env` contents, pasted as-is |
 
-**Adding `CONFIG`:** Open your local `config.yaml`, select all, copy, paste into the secret value field. The workflow writes it to disk before each run. Your personal profile and scoring criteria never touch the repo.
+GitHub Actions reads your `config.yaml` directly from your fork — no separate secret needed for it. That's why you committed it in Episode 4.
 
-**Adding `KEYS`:** Open your local `pathfinder/.env`, select all, copy, paste into the secret value field. This replaces all individual API key secrets - one secret holds everything:
+**Adding `KEYS`:** Open your local `pathfinder/.env`, select all, copy, paste into the secret value field. One secret holds all your API keys:
 ```
 GROQ_API_KEY=gsk_...
 GMAIL_SENDER=you@gmail.com
