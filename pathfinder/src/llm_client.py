@@ -26,20 +26,6 @@ class GroqRateLimitError(Exception):
         self.available_models = available_models  # [{"id": ..., "name": ..., "desc": ...}, ...]
 
 
-# Track which models were used during a generation cycle
-_models_used: list[str] = []
-
-
-def get_models_used() -> list[str]:
-    """Return the list of model IDs used since the last reset."""
-    return list(_models_used)
-
-
-def reset_models_used():
-    """Clear the model usage tracker (call at the start of a generation cycle)."""
-    _models_used.clear()
-
-
 _GROQ_FALLBACK_MODELS = [
     "meta-llama/llama-4-scout-17b-16e-instruct",  # 30K TPM, 500K TPD
     "qwen/qwen3-32b",                              # 6K TPM, 500K TPD
@@ -112,7 +98,6 @@ def _groq_response(
             patient=patient, json_mode=json_mode,
         )
         if result is not None:
-            _models_used.append(model)
             return result
 
     model_name = GROQ_MODELS.get(primary_model, {}).get("name", primary_model)
