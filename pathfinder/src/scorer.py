@@ -6,7 +6,7 @@ import os
 import yaml
 
 from .llm_client import get_llm_response
-from .models import JobListing
+from .models import JobListing, ScoringResult
 from .tracker import get_company_posting_context
 
 logger = logging.getLogger(__name__)
@@ -160,18 +160,9 @@ Extract from the job description:
 Rules:
 {evidence_rules_str}
 
-─── OUTPUT FORMAT ───────────────────────────────────────────
+─── HYPOTHESIS CATEGORIES (for YES / MAYBE only) ────────────
 
-Respond in exactly this format:
-DECISION: YES / MAYBE / NO
-CONFIDENCE: HIGH / MEDIUM / LOW
-REASONING: Under 40 words. State the key signal and how it aligns or conflicts with the candidate's background.
-TOP_QUALIFIER: The single strongest qualifying signal present, or NONE.
-DISQUALIFIER: The triggered disqualifier, or NONE.
-EVIDENCE: One verbatim quote from the job description supporting the decision.
-
-If DECISION is YES or MAYBE, also output:
-HYPOTHESIS_CATEGORY: pick exactly one using the definitions below - choose the best fit; use Unclear only if no category fits at all.
+Pick exactly one; use Unclear only if no category fits at all.
 
   Backfill       - Someone left and the role is being refilled. Signals: single headcount, no growth
                    language, role description reads like a job that has existed before, no mention of
@@ -191,12 +182,24 @@ HYPOTHESIS_CATEGORY: pick exactly one using the definitions below - choose the b
   Unclear        - Posting lacks enough signal to distinguish between categories. Use only when none
                    of the above fit - not as a default when evidence is thin.
 
-HYPOTHESIS_WHY: One sentence. Based on signals in the posting, state why this company is hiring for
-this role right now.
-HYPOTHESIS_VALUE: One sentence. Based on the candidate's background and the hiring reason identified
-above, state the specific value they bring that directly addresses the challenge this hire exists to solve.
+─── OUTPUT FORMAT ───────────────────────────────────────────
 
-Do not use em dashes in your response. Use a plain hyphen (-) instead.
+Respond with a single JSON object matching this schema exactly. No prose, no code
+fence, no trailing commentary.
+
+{{{{
+  "decision": "YES" | "MAYBE" | "NO",
+  "confidence": "HIGH" | "MEDIUM" | "LOW",
+  "reasoning": "Under 40 words. State the key signal and how it aligns or conflicts with the candidate's background.",
+  "top_qualifier": "The single strongest qualifying signal present, or NONE.",
+  "disqualifier": "The triggered disqualifier, or NONE.",
+  "evidence": "One verbatim quote from the job description supporting the decision.",
+  "hypothesis_category": "One of: Backfill, Capacity, New capability, Recovery, Strategic bet, Unclear. Empty string when decision is NO.",
+  "hypothesis_why": "One sentence. Why the company is hiring for this role right now. Required when decision is YES or MAYBE, empty string otherwise.",
+  "hypothesis_value": "One sentence. The specific value the candidate brings to the challenge this hire exists to solve. Required when decision is YES or MAYBE, empty string otherwise."
+}}}}
+
+Do not use em dashes in any string value. Use a plain hyphen (-) instead.
 """
 
 
@@ -231,7 +234,15 @@ def score_job(job: JobListing, company_context: str = "") -> tuple[str, str, str
     """Score a single job.
 
     Returns (score, reason, confidence, hypothesis_category, hypothesis_why, hypothesis_value).
+
+    Raises on schema validation or JSON parse failure so prompt drift surfaces loudly.
+    Network-level errors (requests failures, Groq rate limits) are still softened into a
+    MAYBE so a transient outage does not halt the whole scoring loop.
     """
+    import requests as _requests
+
+    from .llm_client import GroqRateLimitError
+
     prompt = SCORING_PROMPT_TEMPLATE.format(
         title=job.title,
         company=job.company,
@@ -240,55 +251,29 @@ def score_job(job: JobListing, company_context: str = "") -> tuple[str, str, str
         description=(job.description or "")[:3000],
         company_context=company_context,
     )
+
     try:
-        response = get_llm_response(prompt, max_tokens=500)
-        score        = "NO"
-        reasoning    = ""
-        confidence   = ""
-        top_qualifier = ""
-        disqualifier  = ""
-        evidence      = ""
-        hyp_category  = ""
-        hyp_why       = ""
-        hyp_value     = ""
-        for line in response.strip().splitlines():
-            if line.startswith("DECISION:"):
-                score = line.replace("DECISION:", "").strip()
-            elif line.startswith("CONFIDENCE:"):
-                confidence = line.replace("CONFIDENCE:", "").strip()
-            elif line.startswith("REASONING:"):
-                reasoning = line.replace("REASONING:", "").strip()
-            elif line.startswith("TOP_QUALIFIER:"):
-                top_qualifier = line.replace("TOP_QUALIFIER:", "").strip()
-            elif line.startswith("DISQUALIFIER:"):
-                disqualifier = line.replace("DISQUALIFIER:", "").strip()
-            elif line.startswith("EVIDENCE:"):
-                evidence = line.replace("EVIDENCE:", "").strip()
-            elif line.startswith("HYPOTHESIS_CATEGORY:"):
-                hyp_category = line.replace("HYPOTHESIS_CATEGORY:", "").strip()
-            elif line.startswith("HYPOTHESIS_WHY:"):
-                hyp_why = line.replace("HYPOTHESIS_WHY:", "").strip()
-            elif line.startswith("HYPOTHESIS_VALUE:"):
-                hyp_value = line.replace("HYPOTHESIS_VALUE:", "").strip()
-
-        # Compose reason for downstream display: reasoning summary + disqualifier or top qualifier
-        if disqualifier and disqualifier.upper() != "NONE":
-            reason = f"{reasoning} Disqualifier: {disqualifier}."
-        elif top_qualifier and top_qualifier.upper() != "NONE":
-            reason = f"{reasoning} Key signal: {top_qualifier}."
-        else:
-            reason = reasoning
-
-        for field in (reason, hyp_why, hyp_value, evidence):
-            field = field.replace("—", "-")
-        reason    = reason.replace("—", "-")
-        hyp_why   = hyp_why.replace("—", "-")
-        hyp_value = hyp_value.replace("—", "-")
-        evidence  = evidence.replace("—", "-")
-
-        return score, reason, confidence, hyp_category, hyp_why, hyp_value
-    except Exception as e:
+        raw = get_llm_response(prompt, max_tokens=500, json_mode=True)
+    except (_requests.RequestException, GroqRateLimitError) as e:
         return "MAYBE", f"Could not score - review manually ({e})", "", "", "", ""
+
+    result = ScoringResult.model_validate_json(raw)
+
+    if result.disqualifier and result.disqualifier.upper() != "NONE":
+        reason = f"{result.reasoning} Disqualifier: {result.disqualifier}."
+    elif result.top_qualifier and result.top_qualifier.upper() != "NONE":
+        reason = f"{result.reasoning} Key signal: {result.top_qualifier}."
+    else:
+        reason = result.reasoning
+
+    return (
+        result.decision,
+        reason,
+        result.confidence,
+        result.hypothesis_category,
+        result.hypothesis_why,
+        result.hypothesis_value,
+    )
 
 
 def score_all(jobs: list[JobListing]) -> list[dict]:

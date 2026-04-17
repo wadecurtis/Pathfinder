@@ -47,21 +47,34 @@ _GROQ_FALLBACK_MODELS = [
 ]
 
 
-def get_llm_response(prompt: str, max_tokens: int = 4096, model_override: str | None = None) -> str:
+def get_llm_response(
+    prompt: str,
+    max_tokens: int = 4096,
+    model_override: str | None = None,
+    json_mode: bool = False,
+) -> str:
     """Get a response from the configured LLM provider (Groq or Anthropic).
 
     If model_override is provided, Groq will use that model instead of the configured default.
+    If json_mode is True, Groq is instructed to return a JSON object (OpenAI-compatible
+    response_format). The caller is responsible for parsing and schema validation.
     """
     settings = load_settings()
     provider = settings.get("llm", {}).get("provider", "groq")
 
     if provider == "groq":
-        return _groq_response(prompt, max_tokens, settings, model_override=model_override)
+        return _groq_response(
+            prompt, max_tokens, settings,
+            model_override=model_override, json_mode=json_mode,
+        )
     else:
         return _anthropic_response(prompt, max_tokens, settings)
 
 
-def _groq_response(prompt: str, max_tokens: int, settings: dict, model_override: str | None = None) -> str:
+def _groq_response(
+    prompt: str, max_tokens: int, settings: dict,
+    model_override: str | None = None, json_mode: bool = False,
+) -> str:
     """Call Groq API (OpenAI-compatible) with retry on rate limits.
 
     Tries the configured model. If model_override is provided, uses that model with
@@ -94,7 +107,10 @@ def _groq_response(prompt: str, max_tokens: int, settings: dict, model_override:
         if model_idx > 0:
             model_name = GROQ_MODELS.get(model, {}).get("name", model)
             logger.warning("Model rate limited. Falling back to: %s", model_name)
-        result = _groq_call_with_retry(prompt, max_tokens, api_key, model, logger, patient=patient)
+        result = _groq_call_with_retry(
+            prompt, max_tokens, api_key, model, logger,
+            patient=patient, json_mode=json_mode,
+        )
         if result is not None:
             _models_used.append(model)
             return result
@@ -109,7 +125,7 @@ def _groq_response(prompt: str, max_tokens: int, settings: dict, model_override:
 
 def _groq_call_with_retry(
     prompt: str, max_tokens: int, api_key: str, model: str, logger,
-    patient: bool = False,
+    patient: bool = False, json_mode: bool = False,
 ) -> str | None:
     """Try a single Groq model with retries. Returns None if rate limited beyond recovery.
 
@@ -121,6 +137,15 @@ def _groq_call_with_retry(
     max_retries = 3 if not patient else 5
     max_wait = 90 if not patient else 300  # 90s default, 5min when patient
 
+    body = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+    }
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
+
     for attempt in range(max_retries):
         resp = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
@@ -128,12 +153,7 @@ def _groq_call_with_retry(
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            json={
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": max_tokens,
-                "temperature": 0.7,
-            },
+            json=body,
             timeout=120,
         )
 
