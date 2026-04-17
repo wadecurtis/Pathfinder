@@ -27,3 +27,11 @@ class ScoringResult(BaseModel):
     hypothesis_category: str = ""
     hypothesis_why: str = ""
     hypothesis_value: str = ""
+    accessibility_read: Literal[
+        "INCLUSIVE", "MIXED", "EXCLUSIONARY", "INSUFFICIENT_SIGNAL", ""
+    ] = ""
+    accessibility_confidence: Literal["HIGH", "MEDIUM", "LOW", ""] = ""
+    accessibility_evidence: str = ""
+    accessibility_signal_type: Literal[
+        "method-based", "performative", "operational", "boilerplate", "none", ""
+    ] = ""

@@ -237,3 +237,73 @@ llm:
   provider: groq
   groq_model: llama-3.3-70b-versatile
   max_tokens: 4096
+
+
+# ── ACCESSIBILITY (PATHFINDER+) ───────────────────────────────────────────────
+# Optional. Scores postings for inclusive vs exclusionary language from a
+# disabled-worker perspective, on a parallel axis that does NOT change YES/MAYBE/NO.
+# Remove this block or set enabled: false to restore byte-identical behavior.
+#
+# No regex, no phrase lists. The LLM reads the posting and interprets these
+# rules as written. Every accessibility read must cite a verbatim quote.
+
+accessibility:
+  enabled: true
+
+  method_based_signals:
+    description: >
+      Method-based physical or sensory requirements stated as the method itself
+      rather than the outcome. Red flags ONLY when not plausibly essential to
+      the role as described. "Lift 50 lbs" in a Salesforce consultant role is
+      method-based exclusion. "Physical stamina" in a paramedic role is legitimate.
+    examples:
+      - "Must lift 50 lbs" (vs. "move equipment between sites")
+      - "Stand for long periods" (vs. "conduct on-site sessions")
+      - "Valid driver's license required" (vs. "travel to client locations")
+      - "Must be able to hear phone conversations" (vs. "communicate with clients")
+    guardrail:
+      - "Flag only when the physical method is not plausibly essential to the role."
+      - "A method-based requirement in a role where the outcome could be achieved another way is the exclusion signal."
+
+  operational_signals:
+    description: >
+      Concrete, operational green flags. Specific mechanisms, not vibes.
+      These are what earn an INCLUSIVE read. Absence of all of these, paired
+      with boilerplate, is a performative-inclusion pattern.
+    examples:
+      - "Accommodation process explicitly stated (how to request, who to contact)"
+      - "Disability ERG or affinity group mentioned by name"
+      - "Remote-first or fully remote stated as a structural default, not an exception"
+      - "Outcome-based verbs used for responsibilities (deliver, produce, resolve) rather than method-based verbs"
+      - "Scent-free workplace"
+      - "Quiet zones, sensory-aware office design, or flexible workspace options"
+      - "Flexible hours or async-first collaboration stated as a norm"
+
+  boilerplate_suppression:
+    description: >
+      EEO disclaimers and generic diversity statements. Treated as negative
+      signal: zero predictive weight. MUST NOT be cited as evidence of inclusion.
+      A posting with only boilerplate and no operational signals is MIXED or
+      EXCLUSIONARY, never INCLUSIVE.
+    examples:
+      - "Equal opportunity employer"
+      - "We celebrate diversity / diverse perspectives / diverse backgrounds"
+      - "All qualified applicants will receive consideration without regard to..."
+      - "We are committed to building an inclusive workplace"
+    rule:
+      - "Boilerplate is a zero-weight signal. Never cite it as accessibility_evidence for an INCLUSIVE read."
+      - "Boilerplate plus no operational signals = performative inclusion = MIXED or EXCLUSIONARY."
+
+  structural_watch_list:
+    description: >
+      Structural patterns that look neutral but function as exclusion when
+      surfaced. Call these out explicitly in the accessibility_evidence when present.
+    examples:
+      - "Hybrid with specified in-office day counts (e.g., '3 days in office')"
+      - "Video-on mandates for meetings"
+      - "'Consistent attendance is an essential function of this role'"
+      - "'Must be available during core hours' with no async alternative"
+
+  # performative_signals:
+  #   v2 - cultural/affect mandates ("rockstar", "bubbly", "thrives in chaos",
+  #   "we're a family"). Not scored in v1.
