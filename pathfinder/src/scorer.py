@@ -101,6 +101,7 @@ JOB TO EVALUATE:
 Title: {{title}}
 Company: {{company}}
 Location: {{location}}
+Salary: {{salary}}
 Description: {{description}}
 {{company_context}}
 ─── DECISION FRAMEWORK ──────────────────────────────────────
@@ -235,6 +236,7 @@ def score_job(job: JobListing, company_context: str = "") -> tuple[str, str, str
         title=job.title,
         company=job.company,
         location=job.location,
+        salary=job.salary or "not specified",
         description=(job.description or "")[:3000],
         company_context=company_context,
     )
