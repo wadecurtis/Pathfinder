@@ -1,6 +1,7 @@
 name: Pathfinder — Daily Digest
 
 on:
+  # Add your own schedule here. Example: cron: "7 14 * * *" (6am PST daily)
   workflow_dispatch:
     inputs:
       mode:
